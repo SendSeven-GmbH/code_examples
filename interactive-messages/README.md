@@ -181,7 +181,7 @@ python interactive_messages.py
 ```bash
 cd javascript
 npm install
-node interactive-messages.js
+node interactive_messages.js
 ```
 
 ### TypeScript
@@ -189,7 +189,9 @@ node interactive-messages.js
 ```bash
 cd typescript
 npm install
-npx ts-node interactive-messages.ts
+npm run dev
+# Or build and run:
+npm run build && npm start
 ```
 
 ### PHP
@@ -203,7 +205,8 @@ php interactive_messages.php
 
 ```bash
 cd go
-go run main.go
+go mod tidy
+go run interactive_messages.go
 ```
 
 ### Java
@@ -224,6 +227,7 @@ dotnet run
 
 ```bash
 cd ruby
+bundle install
 ruby interactive_messages.rb
 ```
 

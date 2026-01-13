@@ -1,0 +1,20 @@
+{
+  "name": "sendseven-media-attachments-ts",
+  "version": "1.0.0",
+  "description": "SendSeven API - Media Attachments Example (TypeScript)",
+  "main": "media-attachments.ts",
+  "scripts": {
+    "start": "ts-node media-attachments.ts",
+    "build": "tsc"
+  },
+  "keywords": ["sendseven", "api", "messaging", "attachments", "media", "typescript"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

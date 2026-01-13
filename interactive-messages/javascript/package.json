@@ -1,0 +1,15 @@
+{
+  "name": "sendseven-interactive-messages",
+  "version": "1.0.0",
+  "description": "SendSeven API - Interactive Messages Example",
+  "main": "interactive_messages.js",
+  "scripts": {
+    "start": "node interactive_messages.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

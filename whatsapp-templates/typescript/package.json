@@ -1,0 +1,20 @@
+{
+  "name": "sendseven-whatsapp-templates-ts",
+  "version": "1.0.0",
+  "description": "SendSeven API - WhatsApp Templates Example (TypeScript)",
+  "main": "whatsapp-templates.ts",
+  "scripts": {
+    "start": "ts-node whatsapp-templates.ts",
+    "build": "tsc"
+  },
+  "keywords": ["sendseven", "api", "whatsapp", "templates", "messaging", "typescript"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}
