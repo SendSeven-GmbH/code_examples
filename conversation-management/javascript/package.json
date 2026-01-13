@@ -1,0 +1,14 @@
+{
+  "name": "sendseven-conversation-management",
+  "version": "1.0.0",
+  "description": "SendSeven API - Conversation Management Example",
+  "main": "conversation-management.js",
+  "scripts": {
+    "start": "node conversation-management.js"
+  },
+  "keywords": ["sendseven", "api", "messaging", "conversations"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  }
+}

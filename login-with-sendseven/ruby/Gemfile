@@ -1,0 +1,29 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+ruby '>= 2.7.0'
+
+# Web framework
+gem 'sinatra', '~> 3.0'
+gem 'sinatra-contrib', '~> 3.0'   # Includes sinatra-reloader for development
+
+# Web server
+gem 'puma', '~> 6.0'
+
+# Environment variables
+gem 'dotenv', '~> 2.8'
+
+# JWT handling for ID token verification
+gem 'jwt', '~> 2.7'
+
+# HTTP client (net/http is built-in, but these are optional alternatives)
+# gem 'faraday', '~> 2.7'        # Uncomment for Faraday HTTP client
+# gem 'httparty', '~> 0.21'      # Uncomment for HTTParty HTTP client
+
+# JSON handling (built-in with Ruby, but explicit is better)
+gem 'json', '~> 2.6'
+
+group :development do
+  gem 'rubocop', '~> 1.50', require: false
+end

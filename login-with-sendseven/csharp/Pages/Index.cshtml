@@ -1,0 +1,125 @@
+@page
+@using LoginWithSendSeven.Models
+@using System.Text.Json
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Login with SendSeven - Demo";
+
+    var user = HttpContext.Session.GetString("User");
+    var tokens = HttpContext.Session.GetString("Tokens");
+    var userInfo = user != null ? JsonSerializer.Deserialize<UserInfo>(user) : null;
+    var tokenData = tokens != null ? JsonSerializer.Deserialize<TokenResponse>(tokens) : null;
+}
+
+<div class="container">
+    <h1>Login with SendSeven</h1>
+
+    @if (userInfo != null)
+    {
+        <div class="card user-card">
+            <div class="user-info">
+                @if (!string.IsNullOrEmpty(userInfo.Picture))
+                {
+                    <img src="@userInfo.Picture" alt="Avatar" class="avatar" onerror="this.style.background='#6366f1'; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>@(userInfo.Name?.FirstOrDefault() ?? '?')</text></svg>';">
+                }
+                else
+                {
+                    <div class="avatar avatar-placeholder">
+                        @(userInfo.Name?.FirstOrDefault() ?? '?')
+                    </div>
+                }
+                <div>
+                    <h2>@(userInfo.Name ?? "Unknown User")</h2>
+                    <p class="email">@userInfo.Email</p>
+                    @if (userInfo.EmailVerified == true)
+                    {
+                        <span class="badge badge-success">Email Verified</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>User Information</h3>
+            <pre>@JsonSerializer.Serialize(userInfo, new JsonSerializerOptions { WriteIndented = true })</pre>
+        </div>
+
+        @if (tokenData != null)
+        {
+            <div class="card">
+                <h3>Token Information</h3>
+                <table class="token-table">
+                    <tr>
+                        <td><strong>Access Token</strong></td>
+                        <td><code>@(tokenData.AccessToken.Substring(0, Math.Min(30, tokenData.AccessToken.Length)))...</code></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Token Type</strong></td>
+                        <td>@tokenData.TokenType</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Expires In</strong></td>
+                        <td>@tokenData.ExpiresIn seconds</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Scope</strong></td>
+                        <td>@tokenData.Scope</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Refresh Token</strong></td>
+                        <td>@(string.IsNullOrEmpty(tokenData.RefreshToken) ? "Not available" : "Available")</td>
+                    </tr>
+                    <tr>
+                        <td><strong>ID Token</strong></td>
+                        <td>@(string.IsNullOrEmpty(tokenData.IdToken) ? "Not available" : "Available (Verified)")</td>
+                    </tr>
+                </table>
+            </div>
+        }
+
+        <div class="actions">
+            <a href="/refresh" class="btn btn-secondary">Refresh Token</a>
+            <a href="/logout" class="btn btn-danger">Logout</a>
+        </div>
+    }
+    else
+    {
+        <p class="intro">
+            This demo shows how to implement "Sign in with SendSeven" using OAuth2/OIDC
+            Authorization Code flow with PKCE.
+        </p>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">1</div>
+                <div>
+                    <h4>PKCE Security</h4>
+                    <p>SHA-256 code challenge prevents authorization code interception attacks.</p>
+                </div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">2</div>
+                <div>
+                    <h4>State &amp; Nonce</h4>
+                    <p>CSRF and replay protection for secure authentication.</p>
+                </div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">3</div>
+                <div>
+                    <h4>JWT Verification</h4>
+                    <p>ID token signature verified using RS256 and JWKS.</p>
+                </div>
+            </div>
+        </div>
+
+        <a href="/login" class="btn btn-primary btn-large">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                <polyline points="10 17 15 12 10 7"/>
+                <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Sign in with SendSeven
+        </a>
+    }
+</div>

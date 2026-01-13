@@ -1,0 +1,14 @@
+{
+  "name": "sendseven-contact-management",
+  "version": "1.0.0",
+  "description": "SendSeven API - Contact Management Example",
+  "main": "contact-management.js",
+  "scripts": {
+    "start": "node contact-management.js"
+  },
+  "keywords": ["sendseven", "api", "contacts", "crm"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  }
+}

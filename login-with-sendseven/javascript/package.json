@@ -1,0 +1,28 @@
+{
+  "name": "sendseven-login-with-sendseven",
+  "version": "1.0.0",
+  "description": "SendSeven API - Login with SendSeven OAuth2/OIDC Example",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "keywords": [
+    "sendseven",
+    "oauth2",
+    "oidc",
+    "pkce",
+    "sso",
+    "authentication"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0",
+    "express": "^4.18.0",
+    "express-session": "^1.18.0",
+    "jose": "^5.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

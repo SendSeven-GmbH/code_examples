@@ -1,0 +1,20 @@
+{
+  "name": "sendseven-conversation-management-ts",
+  "version": "1.0.0",
+  "description": "SendSeven API - Conversation Management Example (TypeScript)",
+  "main": "conversation-management.ts",
+  "scripts": {
+    "start": "ts-node conversation-management.ts",
+    "build": "tsc"
+  },
+  "keywords": ["sendseven", "api", "messaging", "conversations", "typescript"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

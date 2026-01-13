@@ -1,0 +1,14 @@
+{
+  "name": "sendseven-send-message",
+  "version": "1.0.0",
+  "description": "SendSeven API - Send Message Example",
+  "main": "send-message.js",
+  "scripts": {
+    "start": "node send-message.js"
+  },
+  "keywords": ["sendseven", "api", "messaging"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  }
+}

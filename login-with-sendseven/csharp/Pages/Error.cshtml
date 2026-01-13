@@ -1,0 +1,56 @@
+@page
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Error - Login with SendSeven";
+
+    var error = ViewData["Error"] as string ?? "Unknown Error";
+    var errorDescription = ViewData["ErrorDescription"] as string ?? "An unexpected error occurred.";
+}
+
+<div class="container">
+    <div class="error-card">
+        <div class="error-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+        </div>
+        <h2>@error</h2>
+        <p>@errorDescription</p>
+
+        <div class="error-details">
+            <h4>Troubleshooting</h4>
+            <ul>
+                @switch (error)
+                {
+                    case "invalid_client":
+                        <li>Verify your client_id and client_secret are correct</li>
+                        <li>Check that your app is registered in the SendSeven dashboard</li>
+                        break;
+                    case "invalid_grant":
+                        <li>Authorization codes expire after 10 minutes</li>
+                        <li>Codes can only be used once</li>
+                        <li>Try logging in again</li>
+                        break;
+                    case "invalid_state":
+                        <li>State mismatch could indicate a CSRF attack</li>
+                        <li>Make sure cookies are enabled</li>
+                        <li>Clear your browser cache and try again</li>
+                        break;
+                    case "access_denied":
+                        <li>User denied the authorization request</li>
+                        <li>This is normal if you clicked "Deny"</li>
+                        break;
+                    default:
+                        <li>Check the server logs for more details</li>
+                        <li>Verify your configuration in appsettings.json</li>
+                        <li>Make sure SENDSEVEN_CLIENT_ID and SENDSEVEN_CLIENT_SECRET are set</li>
+                        break;
+                }
+            </ul>
+        </div>
+
+        <a href="/" class="btn btn-secondary">Back to Home</a>
+    </div>
+</div>

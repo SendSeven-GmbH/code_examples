@@ -1,0 +1,20 @@
+{
+  "name": "sendseven-send-message-ts",
+  "version": "1.0.0",
+  "description": "SendSeven API - Send Message Example (TypeScript)",
+  "main": "send-message.ts",
+  "scripts": {
+    "start": "ts-node send-message.ts",
+    "build": "tsc"
+  },
+  "keywords": ["sendseven", "api", "messaging", "typescript"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

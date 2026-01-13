@@ -1,0 +1,14 @@
+{
+  "name": "sendseven-whatsapp-templates",
+  "version": "1.0.0",
+  "description": "SendSeven API - WhatsApp Templates Example",
+  "main": "whatsapp-templates.js",
+  "scripts": {
+    "start": "node whatsapp-templates.js"
+  },
+  "keywords": ["sendseven", "api", "whatsapp", "templates", "messaging"],
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^16.3.0"
+  }
+}
