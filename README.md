@@ -91,14 +91,6 @@ Message format for signature: `{timestamp}.{json_payload}`
 
 See [webhook-listener](./webhook-listener) for implementation examples.
 
-## Rate Limits
-
-| Endpoint Type | Limit |
-|---------------|-------|
-| Standard API | 100 requests/minute |
-| Bulk operations | 10 requests/minute |
-| Webhooks | No limit (we call you) |
-
 ## Error Handling
 
 Standard HTTP status codes are used:
@@ -128,9 +120,9 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 
 ## Support
 
-- **Documentation**: [docs.sendseven.com](https://docs.sendseven.com)
+- **Documentation**: [https://api.sendseven.com/api/v1/docs](https://docs.sendseven.com)
 - **Issues**: [github.com/SendSeven-GmbH/examples/issues](https://github.com/SendSeven-GmbH/examples/issues)
-- **Email**: support@sendseven.com
+- **Email**: dev@sendseven.com
 
 ## License
 
