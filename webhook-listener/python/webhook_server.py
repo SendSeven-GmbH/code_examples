@@ -19,6 +19,7 @@ app = Flask(__name__)
 # Configuration
 WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 PORT = int(os.getenv("PORT", 3000))
+LOG_PAYLOADS = os.getenv("LOG_PAYLOADS", "false").lower() in ("true", "1", "yes")
 
 
 def verify_signature(payload: bytes, signature: str, timestamp: str) -> bool:
@@ -58,7 +59,21 @@ def verify_signature(payload: bytes, signature: str, timestamp: str) -> bool:
 @app.route("/webhooks/sendseven", methods=["POST"])
 def handle_webhook():
     """Handle incoming SendSeven webhooks."""
-    # Get headers
+    # Parse payload first to check for verification challenge
+    try:
+        payload = request.get_json()
+    except Exception as e:
+        print(f"Failed to parse JSON: {e}")
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    # Handle verification challenges (no signature verification needed)
+    # SendSeven sends this when you create/update a webhook to verify ownership
+    if payload.get("type") == "sendseven_verification":
+        challenge = payload.get("challenge")
+        print(f"Verification challenge received: {challenge[:8]}...")
+        return jsonify({"challenge": challenge}), 200
+
+    # Get headers for regular events
     signature = request.headers.get("X-Sendseven-Signature", "")
     timestamp = request.headers.get("X-Sendseven-Timestamp", "")
     delivery_id = request.headers.get("X-Sendseven-Delivery-Id", "")
@@ -69,22 +84,19 @@ def handle_webhook():
         print("Missing required webhook headers")
         return jsonify({"error": "Missing required headers"}), 400
 
-    # Verify signature
+    # Verify signature (payload already parsed above)
     if not verify_signature(request.data, signature, timestamp):
         print(f"Invalid signature for delivery {delivery_id}")
         return jsonify({"error": "Invalid signature"}), 401
-
-    # Parse payload
-    try:
-        payload = request.get_json()
-    except Exception as e:
-        print(f"Failed to parse JSON: {e}")
-        return jsonify({"error": "Invalid JSON"}), 400
 
     event_type_key = payload.get("type", "")
     tenant_id = payload.get("tenant_id", "")
 
     print(f"Webhook received: delivery_id={delivery_id}, event={event_type_key}, tenant={tenant_id}")
+
+    # Log full payload if debugging is enabled
+    if LOG_PAYLOADS:
+        print(f"Full payload:\n{json.dumps(payload, indent=2)}")
 
     # Handle different event types
     try:
@@ -104,8 +116,16 @@ def handle_webhook():
             handle_conversation_assigned(payload)
         elif event_type_key == "contact.created":
             handle_contact_created(payload)
+        elif event_type_key == "contact.updated":
+            handle_contact_updated(payload)
+        elif event_type_key == "contact.deleted":
+            handle_contact_deleted(payload)
         elif event_type_key == "contact.subscribed":
             handle_contact_subscribed(payload)
+        elif event_type_key == "contact.unsubscribed":
+            handle_contact_unsubscribed(payload)
+        elif event_type_key == "link.clicked":
+            handle_link_clicked(payload)
         else:
             print(f"Unknown event type: {event_type_key}")
     except Exception as e:
@@ -176,6 +196,21 @@ def handle_contact_created(payload: dict):
     print(f"  Contact created: {contact.get('name', 'Unknown')} ({contact.get('phone', 'No phone')})")
 
 
+def handle_contact_updated(payload: dict):
+    """Process contact.updated event."""
+    data = payload.get("data", {})
+    contact = data.get("contact", {})
+    changes = data.get("changes", {})
+    print(f"  Contact updated: {contact.get('id')} - changes: {list(changes.keys())}")
+
+
+def handle_contact_deleted(payload: dict):
+    """Process contact.deleted event."""
+    data = payload.get("data", {})
+    contact = data.get("contact", {})
+    print(f"  Contact deleted: {contact.get('id')} ({contact.get('name', 'Unknown')})")
+
+
 def handle_contact_subscribed(payload: dict):
     """Process contact.subscribed event."""
     data = payload.get("data", {})
@@ -184,10 +219,27 @@ def handle_contact_subscribed(payload: dict):
     print(f"  Contact {contact.get('name', 'Unknown')} subscribed to list {subscription.get('list_id')}")
 
 
+def handle_contact_unsubscribed(payload: dict):
+    """Process contact.unsubscribed event."""
+    data = payload.get("data", {})
+    contact = data.get("contact", {})
+    subscription = data.get("subscription", {})
+    print(f"  Contact {contact.get('name', 'Unknown')} unsubscribed from list {subscription.get('list_id')}")
+
+
+def handle_link_clicked(payload: dict):
+    """Process link.clicked event."""
+    data = payload.get("data", {})
+    link = data.get("link", {})
+    contact = data.get("contact", {})
+    print(f"  Link clicked: {link.get('url', 'Unknown URL')} by {contact.get('name', 'Unknown')}")
+
+
 if __name__ == "__main__":
     if not WEBHOOK_SECRET:
         print("Warning: WEBHOOK_SECRET not set - signatures will not be verified!")
 
     print(f"Starting webhook server on port {PORT}")
+    print(f"Payload logging: {'ENABLED' if LOG_PAYLOADS else 'disabled'}")
     print(f"Webhook endpoint: http://localhost:{PORT}/webhooks/sendseven")
     app.run(host="0.0.0.0", port=PORT, debug=True)

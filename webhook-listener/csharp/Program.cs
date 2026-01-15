@@ -12,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
 var webhookSecret = Environment.GetEnvironmentVariable("WEBHOOK_SECRET") ?? "";
+var logPayloadsEnv = (Environment.GetEnvironmentVariable("LOG_PAYLOADS") ?? "").ToLower();
+var logPayloads = logPayloadsEnv == "true" || logPayloadsEnv == "1" || logPayloadsEnv == "yes";
 
 if (string.IsNullOrEmpty(webhookSecret))
 {
@@ -20,42 +22,60 @@ if (string.IsNullOrEmpty(webhookSecret))
 
 app.MapPost("/webhooks/sendseven", async (HttpContext context) =>
 {
-    // Get headers
-    var signature = context.Request.Headers["X-Sendseven-Signature"].FirstOrDefault() ?? "";
-    var timestamp = context.Request.Headers["X-Sendseven-Timestamp"].FirstOrDefault() ?? "";
-    var deliveryId = context.Request.Headers["X-Sendseven-Delivery-Id"].FirstOrDefault() ?? "";
-    var eventType = context.Request.Headers["X-Sendseven-Event"].FirstOrDefault() ?? "";
-
-    // Verify required headers
-    if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(timestamp) ||
-        string.IsNullOrEmpty(deliveryId) || string.IsNullOrEmpty(eventType))
-    {
-        Console.WriteLine("Missing required webhook headers");
-        context.Response.StatusCode = 400;
-        await context.Response.WriteAsJsonAsync(new { error = "Missing required headers" });
-        return;
-    }
-
-    // Read body
+    // Read body first
     using var reader = new StreamReader(context.Request.Body);
     var payload = await reader.ReadToEndAsync();
-
-    // Verify signature
-    if (!string.IsNullOrEmpty(webhookSecret) && !VerifySignature(payload, signature, timestamp, webhookSecret))
-    {
-        Console.WriteLine($"Invalid signature for delivery {deliveryId}");
-        context.Response.StatusCode = 401;
-        await context.Response.WriteAsJsonAsync(new { error = "Invalid signature" });
-        return;
-    }
 
     try
     {
         var data = JsonSerializer.Deserialize<JsonElement>(payload);
         var type = data.GetProperty("type").GetString() ?? "";
+
+        // Handle verification challenges (no signature verification needed)
+        // SendSeven sends this when you create/update a webhook to verify ownership
+        if (type == "sendseven_verification")
+        {
+            var challenge = data.GetProperty("challenge").GetString() ?? "";
+            Console.WriteLine($"Verification challenge received: {challenge.Substring(0, 8)}...");
+            await context.Response.WriteAsJsonAsync(new { challenge });
+            return;
+        }
+
+        // Get headers for regular events
+        var signature = context.Request.Headers["X-Sendseven-Signature"].FirstOrDefault() ?? "";
+        var timestamp = context.Request.Headers["X-Sendseven-Timestamp"].FirstOrDefault() ?? "";
+        var deliveryId = context.Request.Headers["X-Sendseven-Delivery-Id"].FirstOrDefault() ?? "";
+        var eventType = context.Request.Headers["X-Sendseven-Event"].FirstOrDefault() ?? "";
+
+        // Verify required headers
+        if (string.IsNullOrEmpty(signature) || string.IsNullOrEmpty(timestamp) ||
+            string.IsNullOrEmpty(deliveryId) || string.IsNullOrEmpty(eventType))
+        {
+            Console.WriteLine("Missing required webhook headers");
+            context.Response.StatusCode = 400;
+            await context.Response.WriteAsJsonAsync(new { error = "Missing required headers" });
+            return;
+        }
+
+        // Verify signature
+        if (!string.IsNullOrEmpty(webhookSecret) && !VerifySignature(payload, signature, timestamp, webhookSecret))
+        {
+            Console.WriteLine($"Invalid signature for delivery {deliveryId}");
+            context.Response.StatusCode = 401;
+            await context.Response.WriteAsJsonAsync(new { error = "Invalid signature" });
+            return;
+        }
+
         var tenantId = data.GetProperty("tenant_id").GetString() ?? "";
 
         Console.WriteLine($"Webhook received: delivery_id={deliveryId}, event={type}, tenant={tenantId}");
+
+        // Log full payload if debugging is enabled
+        if (logPayloads)
+        {
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            Console.WriteLine("Full payload:\n" + JsonSerializer.Serialize(data, options));
+        }
 
         // Handle different event types
         switch (type)
@@ -78,20 +98,40 @@ app.MapPost("/webhooks/sendseven", async (HttpContext context) =>
             case "conversation.closed":
                 HandleConversationClosed(data);
                 break;
+            case "conversation.assigned":
+                HandleConversationAssigned(data);
+                break;
             case "contact.created":
                 HandleContactCreated(data);
+                break;
+            case "contact.updated":
+                HandleContactUpdated(data);
+                break;
+            case "contact.deleted":
+                HandleContactDeleted(data);
+                break;
+            case "contact.subscribed":
+                HandleContactSubscribed(data);
+                break;
+            case "contact.unsubscribed":
+                HandleContactUnsubscribed(data);
+                break;
+            case "link.clicked":
+                HandleLinkClicked(data);
                 break;
             default:
                 Console.WriteLine($"  Unknown event type: {type}");
                 break;
         }
+
+        await context.Response.WriteAsJsonAsync(new { success = true, delivery_id = deliveryId });
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error processing webhook: {ex.Message}");
+        context.Response.StatusCode = 200;
+        await context.Response.WriteAsJsonAsync(new { success = true });
     }
-
-    await context.Response.WriteAsJsonAsync(new { success = true, delivery_id = deliveryId });
 });
 
 bool VerifySignature(string payload, string signature, string timestamp, string secret)
@@ -160,6 +200,16 @@ void HandleConversationClosed(JsonElement payload)
     Console.WriteLine($"  Conversation closed: {convId}");
 }
 
+void HandleConversationAssigned(JsonElement payload)
+{
+    var convId = payload.GetProperty("data").GetProperty("conversation").GetProperty("id").GetString();
+    var data = payload.GetProperty("data");
+    var assignedTo = data.TryGetProperty("assigned_to", out var a) && a.TryGetProperty("name", out var n)
+        ? n.GetString() ?? "Unknown"
+        : "Unknown";
+    Console.WriteLine($"  Conversation {convId} assigned to {assignedTo}");
+}
+
 void HandleContactCreated(JsonElement payload)
 {
     var contact = payload.GetProperty("data").GetProperty("contact");
@@ -168,8 +218,51 @@ void HandleContactCreated(JsonElement payload)
     Console.WriteLine($"  Contact created: {name} ({phone})");
 }
 
+void HandleContactUpdated(JsonElement payload)
+{
+    var contactId = payload.GetProperty("data").GetProperty("contact").GetProperty("id").GetString();
+    Console.WriteLine($"  Contact updated: {contactId}");
+}
+
+void HandleContactDeleted(JsonElement payload)
+{
+    var contact = payload.GetProperty("data").GetProperty("contact");
+    var contactId = contact.GetProperty("id").GetString();
+    var name = contact.TryGetProperty("name", out var n) ? n.GetString() ?? "Unknown" : "Unknown";
+    Console.WriteLine($"  Contact deleted: {contactId} ({name})");
+}
+
+void HandleContactSubscribed(JsonElement payload)
+{
+    var contact = payload.GetProperty("data").GetProperty("contact");
+    var name = contact.TryGetProperty("name", out var n) ? n.GetString() ?? "Unknown" : "Unknown";
+    var listId = payload.GetProperty("data").GetProperty("subscription").GetProperty("list_id").GetString();
+    Console.WriteLine($"  Contact {name} subscribed to list {listId}");
+}
+
+void HandleContactUnsubscribed(JsonElement payload)
+{
+    var contact = payload.GetProperty("data").GetProperty("contact");
+    var name = contact.TryGetProperty("name", out var n) ? n.GetString() ?? "Unknown" : "Unknown";
+    var listId = payload.GetProperty("data").GetProperty("subscription").GetProperty("list_id").GetString();
+    Console.WriteLine($"  Contact {name} unsubscribed from list {listId}");
+}
+
+void HandleLinkClicked(JsonElement payload)
+{
+    var data = payload.GetProperty("data");
+    var url = data.TryGetProperty("link", out var l) && l.TryGetProperty("url", out var u)
+        ? u.GetString() ?? "Unknown URL"
+        : "Unknown URL";
+    var name = data.TryGetProperty("contact", out var c) && c.TryGetProperty("name", out var n)
+        ? n.GetString() ?? "Unknown"
+        : "Unknown";
+    Console.WriteLine($"  Link clicked: {url} by {name}");
+}
+
 var port = Environment.GetEnvironmentVariable("PORT") ?? "3000";
 Console.WriteLine($"Webhook server listening on port {port}");
+Console.WriteLine($"Payload logging: {(logPayloads ? "ENABLED" : "disabled")}");
 Console.WriteLine($"Webhook endpoint: http://localhost:{port}/webhooks/sendseven");
 
 app.Run($"http://0.0.0.0:{port}");

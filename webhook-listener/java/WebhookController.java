@@ -28,6 +28,15 @@ public class WebhookController {
 
     private static final String WEBHOOK_SECRET = System.getenv("WEBHOOK_SECRET") != null
             ? System.getenv("WEBHOOK_SECRET") : "";
+    private static final boolean LOG_PAYLOADS;
+
+    static {
+        String logPayloadsEnv = System.getenv("LOG_PAYLOADS");
+        LOG_PAYLOADS = logPayloadsEnv != null &&
+                (logPayloadsEnv.equalsIgnoreCase("true") ||
+                 logPayloadsEnv.equals("1") ||
+                 logPayloadsEnv.equalsIgnoreCase("yes"));
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -35,6 +44,7 @@ public class WebhookController {
         if (WEBHOOK_SECRET.isEmpty()) {
             System.out.println("Warning: WEBHOOK_SECRET not set - signatures will not be verified!");
         }
+        System.out.println("Payload logging: " + (LOG_PAYLOADS ? "ENABLED" : "disabled"));
         SpringApplication.run(WebhookController.class, args);
     }
 
@@ -46,25 +56,40 @@ public class WebhookController {
             @RequestHeader(value = "X-Sendseven-Event", required = false) String eventType,
             @RequestBody String payload
     ) {
-        // Verify required headers
-        if (signature == null || timestamp == null || deliveryId == null || eventType == null) {
-            System.out.println("Missing required webhook headers");
-            return ResponseEntity.badRequest().body(Map.of("error", "Missing required headers"));
-        }
-
-        // Verify signature
-        if (!WEBHOOK_SECRET.isEmpty() && !verifySignature(payload, signature, timestamp)) {
-            System.out.println("Invalid signature for delivery " + deliveryId);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid signature"));
-        }
-
         try {
             JsonNode data = objectMapper.readTree(payload);
             String type = data.path("type").asText("");
+
+            // Handle verification challenges (no signature verification needed)
+            // SendSeven sends this when you create/update a webhook to verify ownership
+            if ("sendseven_verification".equals(type)) {
+                String challenge = data.path("challenge").asText("");
+                System.out.println("Verification challenge received: " + challenge.substring(0, 8) + "...");
+                return ResponseEntity.ok(Map.of("challenge", challenge));
+            }
+
+            // Verify required headers for regular events
+            if (signature == null || timestamp == null || deliveryId == null || eventType == null) {
+                System.out.println("Missing required webhook headers");
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing required headers"));
+            }
+
+            // Verify signature
+            if (!WEBHOOK_SECRET.isEmpty() && !verifySignature(payload, signature, timestamp)) {
+                System.out.println("Invalid signature for delivery " + deliveryId);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid signature"));
+            }
+
             String tenantId = data.path("tenant_id").asText("");
 
             System.out.printf("Webhook received: delivery_id=%s, event=%s, tenant=%s%n",
                     deliveryId, type, tenantId);
+
+            // Log full payload if debugging is enabled
+            if (LOG_PAYLOADS) {
+                String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(data);
+                System.out.println("Full payload:\n" + prettyJson);
+            }
 
             // Handle different event types
             switch (type) {
@@ -86,8 +111,26 @@ public class WebhookController {
                 case "conversation.closed":
                     handleConversationClosed(data);
                     break;
+                case "conversation.assigned":
+                    handleConversationAssigned(data);
+                    break;
                 case "contact.created":
                     handleContactCreated(data);
+                    break;
+                case "contact.updated":
+                    handleContactUpdated(data);
+                    break;
+                case "contact.deleted":
+                    handleContactDeleted(data);
+                    break;
+                case "contact.subscribed":
+                    handleContactSubscribed(data);
+                    break;
+                case "contact.unsubscribed":
+                    handleContactUnsubscribed(data);
+                    break;
+                case "link.clicked":
+                    handleLinkClicked(data);
                     break;
                 default:
                     System.out.println("  Unknown event type: " + type);
@@ -187,10 +230,46 @@ public class WebhookController {
         System.out.println("  Conversation closed: " + convId);
     }
 
+    private void handleConversationAssigned(JsonNode payload) {
+        String convId = payload.path("data").path("conversation").path("id").asText();
+        String assignedTo = payload.path("data").path("assigned_to").path("name").asText("Unknown");
+        System.out.printf("  Conversation %s assigned to %s%n", convId, assignedTo);
+    }
+
     private void handleContactCreated(JsonNode payload) {
         JsonNode contact = payload.path("data").path("contact");
         String name = contact.path("name").asText("Unknown");
         String phone = contact.path("phone").asText("No phone");
         System.out.printf("  Contact created: %s (%s)%n", name, phone);
+    }
+
+    private void handleContactUpdated(JsonNode payload) {
+        String contactId = payload.path("data").path("contact").path("id").asText();
+        System.out.println("  Contact updated: " + contactId);
+    }
+
+    private void handleContactDeleted(JsonNode payload) {
+        JsonNode contact = payload.path("data").path("contact");
+        String contactId = contact.path("id").asText();
+        String name = contact.path("name").asText("Unknown");
+        System.out.printf("  Contact deleted: %s (%s)%n", contactId, name);
+    }
+
+    private void handleContactSubscribed(JsonNode payload) {
+        String name = payload.path("data").path("contact").path("name").asText("Unknown");
+        String listId = payload.path("data").path("subscription").path("list_id").asText();
+        System.out.printf("  Contact %s subscribed to list %s%n", name, listId);
+    }
+
+    private void handleContactUnsubscribed(JsonNode payload) {
+        String name = payload.path("data").path("contact").path("name").asText("Unknown");
+        String listId = payload.path("data").path("subscription").path("list_id").asText();
+        System.out.printf("  Contact %s unsubscribed from list %s%n", name, listId);
+    }
+
+    private void handleLinkClicked(JsonNode payload) {
+        String url = payload.path("data").path("link").path("url").asText("Unknown URL");
+        String name = payload.path("data").path("contact").path("name").asText("Unknown");
+        System.out.printf("  Link clicked: %s by %s%n", url, name);
     }
 }

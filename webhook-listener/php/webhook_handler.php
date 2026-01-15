@@ -22,6 +22,7 @@ function loadEnv(string $path): void {
 loadEnv(__DIR__ . '/.env');
 
 $WEBHOOK_SECRET = getenv('WEBHOOK_SECRET') ?: '';
+$LOG_PAYLOADS = in_array(strtolower(getenv('LOG_PAYLOADS') ?: ''), ['true', '1', 'yes']);
 
 /**
  * Verify the webhook signature using HMAC-SHA256.
@@ -50,7 +51,7 @@ function verifySignature(string $payload, string $signature, string $timestamp, 
  * Handle the webhook request.
  */
 function handleWebhook(): void {
-    global $WEBHOOK_SECRET;
+    global $WEBHOOK_SECRET, $LOG_PAYLOADS;
 
     // Only handle POST requests to webhook endpoint
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -59,7 +60,29 @@ function handleWebhook(): void {
         return;
     }
 
-    // Get headers
+    // Get raw payload first
+    $payload = file_get_contents('php://input');
+
+    // Parse payload
+    $data = json_decode($payload, true);
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode(['error' => 'Invalid JSON']);
+        return;
+    }
+
+    // Handle verification challenges (no signature verification needed)
+    // SendSeven sends this when you create/update a webhook to verify ownership
+    if (($data['type'] ?? '') === 'sendseven_verification') {
+        $challenge = $data['challenge'] ?? '';
+        error_log("Verification challenge received: " . substr($challenge, 0, 8) . "...");
+        http_response_code(200);
+        header('Content-Type: application/json');
+        echo json_encode(['challenge' => $challenge]);
+        return;
+    }
+
+    // Get headers for regular events
     $signature = $_SERVER['HTTP_X_SENDSEVEN_SIGNATURE'] ?? '';
     $timestamp = $_SERVER['HTTP_X_SENDSEVEN_TIMESTAMP'] ?? '';
     $deliveryId = $_SERVER['HTTP_X_SENDSEVEN_DELIVERY_ID'] ?? '';
@@ -73,9 +96,6 @@ function handleWebhook(): void {
         return;
     }
 
-    // Get raw payload
-    $payload = file_get_contents('php://input');
-
     // Verify signature
     if ($WEBHOOK_SECRET && !verifySignature($payload, $signature, $timestamp, $WEBHOOK_SECRET)) {
         http_response_code(401);
@@ -84,18 +104,15 @@ function handleWebhook(): void {
         return;
     }
 
-    // Parse payload
-    $data = json_decode($payload, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        http_response_code(400);
-        echo json_encode(['error' => 'Invalid JSON']);
-        return;
-    }
-
     $eventTypeKey = $data['type'] ?? '';
     $tenantId = $data['tenant_id'] ?? '';
 
     error_log("Webhook received: delivery_id=$deliveryId, event=$eventTypeKey, tenant=$tenantId");
+
+    // Log full payload if debugging is enabled
+    if ($LOG_PAYLOADS) {
+        error_log("Full payload:\n" . json_encode($data, JSON_PRETTY_PRINT));
+    }
 
     // Handle different event types
     try {
@@ -118,11 +135,26 @@ function handleWebhook(): void {
             case 'conversation.closed':
                 handleConversationClosed($data);
                 break;
+            case 'conversation.assigned':
+                handleConversationAssigned($data);
+                break;
             case 'contact.created':
                 handleContactCreated($data);
                 break;
+            case 'contact.updated':
+                handleContactUpdated($data);
+                break;
+            case 'contact.deleted':
+                handleContactDeleted($data);
+                break;
             case 'contact.subscribed':
                 handleContactSubscribed($data);
+                break;
+            case 'contact.unsubscribed':
+                handleContactUnsubscribed($data);
+                break;
+            case 'link.clicked':
+                handleLinkClicked($data);
                 break;
             default:
                 error_log("  Unknown event type: $eventTypeKey");
@@ -178,11 +210,44 @@ function handleContactCreated(array $payload): void {
     error_log("  Contact created: $name ($phone)");
 }
 
+function handleConversationAssigned(array $payload): void {
+    $convId = $payload['data']['conversation']['id'] ?? '';
+    $assignedTo = $payload['data']['assigned_to']['name'] ?? 'Unknown';
+    error_log("  Conversation $convId assigned to $assignedTo");
+}
+
+function handleContactUpdated(array $payload): void {
+    $contactId = $payload['data']['contact']['id'] ?? '';
+    error_log("  Contact updated: $contactId");
+}
+
+function handleContactDeleted(array $payload): void {
+    $contact = $payload['data']['contact'] ?? [];
+    $contactId = $contact['id'] ?? '';
+    $name = $contact['name'] ?? 'Unknown';
+    error_log("  Contact deleted: $contactId ($name)");
+}
+
 function handleContactSubscribed(array $payload): void {
     $contact = $payload['data']['contact'] ?? [];
     $listId = $payload['data']['subscription']['list_id'] ?? '';
     $name = $contact['name'] ?? 'Unknown';
     error_log("  Contact $name subscribed to list $listId");
+}
+
+function handleContactUnsubscribed(array $payload): void {
+    $contact = $payload['data']['contact'] ?? [];
+    $listId = $payload['data']['subscription']['list_id'] ?? '';
+    $name = $contact['name'] ?? 'Unknown';
+    error_log("  Contact $name unsubscribed from list $listId");
+}
+
+function handleLinkClicked(array $payload): void {
+    $link = $payload['data']['link'] ?? [];
+    $contact = $payload['data']['contact'] ?? [];
+    $url = $link['url'] ?? 'Unknown URL';
+    $name = $contact['name'] ?? 'Unknown';
+    error_log("  Link clicked: $url by $name");
 }
 
 // Run the handler

@@ -13,6 +13,7 @@ const app = express();
 // Configuration
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
 const PORT = process.env.PORT || 3000;
+const LOG_PAYLOADS = ['true', '1', 'yes'].includes((process.env.LOG_PAYLOADS || '').toLowerCase());
 
 // Middleware to capture raw body for signature verification
 app.use(express.json({
@@ -56,7 +57,16 @@ function verifySignature(payload, signature, timestamp) {
  * Handle incoming SendSeven webhooks.
  */
 app.post('/webhooks/sendseven', (req, res) => {
-  // Get headers
+  const payload = req.body;
+
+  // Handle verification challenges (no signature verification needed)
+  // SendSeven sends this when you create/update a webhook to verify ownership
+  if (payload.type === 'sendseven_verification') {
+    console.log(`Verification challenge received: ${payload.challenge.slice(0, 8)}...`);
+    return res.status(200).json({ challenge: payload.challenge });
+  }
+
+  // Get headers for regular events
   const signature = req.headers['x-sendseven-signature'] || '';
   const timestamp = req.headers['x-sendseven-timestamp'] || '';
   const deliveryId = req.headers['x-sendseven-delivery-id'] || '';
@@ -74,11 +84,15 @@ app.post('/webhooks/sendseven', (req, res) => {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  const payload = req.body;
   const eventTypeKey = payload.type || '';
   const tenantId = payload.tenant_id || '';
 
   console.log(`Webhook received: delivery_id=${deliveryId}, event=${eventTypeKey}, tenant=${tenantId}`);
+
+  // Log full payload if debugging is enabled
+  if (LOG_PAYLOADS) {
+    console.log('Full payload:\n' + JSON.stringify(payload, null, 2));
+  }
 
   // Handle different event types
   try {
@@ -107,8 +121,20 @@ app.post('/webhooks/sendseven', (req, res) => {
       case 'contact.created':
         handleContactCreated(payload);
         break;
+      case 'contact.updated':
+        handleContactUpdated(payload);
+        break;
+      case 'contact.deleted':
+        handleContactDeleted(payload);
+        break;
       case 'contact.subscribed':
         handleContactSubscribed(payload);
+        break;
+      case 'contact.unsubscribed':
+        handleContactUnsubscribed(payload);
+        break;
+      case 'link.clicked':
+        handleLinkClicked(payload);
         break;
       default:
         console.log(`  Unknown event type: ${eventTypeKey}`);
@@ -162,9 +188,29 @@ function handleContactCreated(payload) {
   console.log(`  Contact created: ${contact.name || 'Unknown'} (${contact.phone || 'No phone'})`);
 }
 
+function handleContactUpdated(payload) {
+  const { contact = {}, changes = {} } = payload.data || {};
+  console.log(`  Contact updated: ${contact.id} - changes: ${Object.keys(changes).join(', ')}`);
+}
+
+function handleContactDeleted(payload) {
+  const { contact = {} } = payload.data || {};
+  console.log(`  Contact deleted: ${contact.id} (${contact.name || 'Unknown'})`);
+}
+
 function handleContactSubscribed(payload) {
   const { contact = {}, subscription = {} } = payload.data || {};
   console.log(`  Contact ${contact.name || 'Unknown'} subscribed to list ${subscription.list_id}`);
+}
+
+function handleContactUnsubscribed(payload) {
+  const { contact = {}, subscription = {} } = payload.data || {};
+  console.log(`  Contact ${contact.name || 'Unknown'} unsubscribed from list ${subscription.list_id}`);
+}
+
+function handleLinkClicked(payload) {
+  const { link = {}, contact = {} } = payload.data || {};
+  console.log(`  Link clicked: ${link.url || 'Unknown URL'} by ${contact.name || 'Unknown'}`);
 }
 
 // Start server
@@ -173,5 +219,6 @@ app.listen(PORT, () => {
     console.log('Warning: WEBHOOK_SECRET not set - signatures will not be verified!');
   }
   console.log(`Webhook server listening on port ${PORT}`);
+  console.log(`Payload logging: ${LOG_PAYLOADS ? 'ENABLED' : 'disabled'}`);
   console.log(`Webhook endpoint: http://localhost:${PORT}/webhooks/sendseven`);
 });

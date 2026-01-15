@@ -15,6 +15,7 @@ const app = express();
 // Configuration
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || '';
 const PORT = parseInt(process.env.PORT || '3000', 10);
+const LOG_PAYLOADS = ['true', '1', 'yes'].includes((process.env.LOG_PAYLOADS || '').toLowerCase());
 
 // Types
 interface WebhookPayload {
@@ -102,6 +103,15 @@ function verifySignature(payload: object, signature: string, timestamp: string):
  * Handle incoming SendSeven webhooks.
  */
 app.post('/webhooks/sendseven', (req: WebhookRequest, res: Response) => {
+  const payload = req.body;
+
+  // Handle verification challenges (no signature verification needed)
+  // SendSeven sends this when you create/update a webhook to verify ownership
+  if (payload.type === 'sendseven_verification') {
+    console.log(`Verification challenge received: ${payload.challenge?.slice(0, 8)}...`);
+    return res.status(200).json({ challenge: payload.challenge });
+  }
+
   const signature = req.headers['x-sendseven-signature'] as string || '';
   const timestamp = req.headers['x-sendseven-timestamp'] as string || '';
   const deliveryId = req.headers['x-sendseven-delivery-id'] as string || '';
@@ -117,34 +127,57 @@ app.post('/webhooks/sendseven', (req: WebhookRequest, res: Response) => {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  const payload = req.body as WebhookPayload;
-  console.log(`Webhook received: delivery_id=${deliveryId}, event=${payload.type}, tenant=${payload.tenant_id}`);
+  const typedPayload = payload as WebhookPayload;
+  console.log(`Webhook received: delivery_id=${deliveryId}, event=${typedPayload.type}, tenant=${typedPayload.tenant_id}`);
+
+  // Log full payload if debugging is enabled
+  if (LOG_PAYLOADS) {
+    console.log('Full payload:\n' + JSON.stringify(typedPayload, null, 2));
+  }
 
   try {
-    switch (payload.type) {
+    switch (typedPayload.type) {
       case 'message.received':
-        handleMessageReceived(payload);
+        handleMessageReceived(typedPayload);
         break;
       case 'message.sent':
-        handleMessageSent(payload);
+        handleMessageSent(typedPayload);
         break;
       case 'message.delivered':
-        handleMessageDelivered(payload);
+        handleMessageDelivered(typedPayload);
         break;
       case 'message.failed':
-        handleMessageFailed(payload);
+        handleMessageFailed(typedPayload);
         break;
       case 'conversation.created':
-        handleConversationCreated(payload);
+        handleConversationCreated(typedPayload);
         break;
       case 'conversation.closed':
-        handleConversationClosed(payload);
+        handleConversationClosed(typedPayload);
+        break;
+      case 'conversation.assigned':
+        handleConversationAssigned(typedPayload);
         break;
       case 'contact.created':
-        handleContactCreated(payload);
+        handleContactCreated(typedPayload);
+        break;
+      case 'contact.updated':
+        handleContactUpdated(typedPayload);
+        break;
+      case 'contact.deleted':
+        handleContactDeleted(typedPayload);
+        break;
+      case 'contact.subscribed':
+        handleContactSubscribed(typedPayload);
+        break;
+      case 'contact.unsubscribed':
+        handleContactUnsubscribed(typedPayload);
+        break;
+      case 'link.clicked':
+        handleLinkClicked(typedPayload);
         break;
       default:
-        console.log(`  Unknown event type: ${payload.type}`);
+        console.log(`  Unknown event type: ${typedPayload.type}`);
     }
   } catch (error) {
     console.error(`Error processing webhook: ${error}`);
@@ -178,9 +211,41 @@ function handleConversationClosed(payload: WebhookPayload): void {
   console.log(`  Conversation closed: ${payload.data.conversation?.id}`);
 }
 
+function handleConversationAssigned(payload: WebhookPayload): void {
+  const { conversation, assigned_to } = payload.data;
+  console.log(`  Conversation ${conversation?.id} assigned to ${assigned_to?.name || 'Unknown'}`);
+}
+
 function handleContactCreated(payload: WebhookPayload): void {
   const { contact } = payload.data;
   console.log(`  Contact created: ${contact?.name || 'Unknown'} (${contact?.phone || 'No phone'})`);
+}
+
+function handleContactUpdated(payload: WebhookPayload): void {
+  const { contact } = payload.data;
+  console.log(`  Contact updated: ${contact?.id}`);
+}
+
+function handleContactDeleted(payload: WebhookPayload): void {
+  const { contact } = payload.data;
+  console.log(`  Contact deleted: ${contact?.id} (${contact?.name || 'Unknown'})`);
+}
+
+function handleContactSubscribed(payload: WebhookPayload): void {
+  const { contact, subscription } = payload.data;
+  console.log(`  Contact ${contact?.name || 'Unknown'} subscribed to list ${subscription?.list_id}`);
+}
+
+function handleContactUnsubscribed(payload: WebhookPayload): void {
+  const { contact, subscription } = payload.data;
+  console.log(`  Contact ${contact?.name || 'Unknown'} unsubscribed from list ${subscription?.list_id}`);
+}
+
+function handleLinkClicked(payload: WebhookPayload): void {
+  const data = payload.data as any;
+  const link = data.link || {};
+  const contact = data.contact || {};
+  console.log(`  Link clicked: ${link.url || 'Unknown URL'} by ${contact.name || 'Unknown'}`);
 }
 
 app.listen(PORT, () => {
@@ -188,5 +253,6 @@ app.listen(PORT, () => {
     console.log('Warning: WEBHOOK_SECRET not set - signatures will not be verified!');
   }
   console.log(`Webhook server listening on port ${PORT}`);
+  console.log(`Payload logging: ${LOG_PAYLOADS ? 'ENABLED' : 'disabled'}`);
   console.log(`Webhook endpoint: http://localhost:${PORT}/webhooks/sendseven`);
 });

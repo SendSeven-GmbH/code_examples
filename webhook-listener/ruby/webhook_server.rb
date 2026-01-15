@@ -29,6 +29,7 @@ load_env_file
 # Configuration
 WEBHOOK_SECRET = ENV['WEBHOOK_SECRET'] || ''
 PORT = (ENV['PORT'] || '3000').to_i
+LOG_PAYLOADS = %w[true 1 yes].include?((ENV['LOG_PAYLOADS'] || '').downcase)
 
 set :port, PORT
 set :bind, '0.0.0.0'
@@ -70,7 +71,25 @@ end
 post '/webhooks/sendseven' do
   content_type :json
 
-  # Get headers
+  # Read body first
+  payload = request.body.read
+
+  # Parse payload
+  begin
+    data = JSON.parse(payload)
+  rescue JSON::ParserError
+    halt 400, { error: 'Invalid JSON' }.to_json
+  end
+
+  # Handle verification challenges (no signature verification needed)
+  # SendSeven sends this when you create/update a webhook to verify ownership
+  if data['type'] == 'sendseven_verification'
+    challenge = data['challenge'] || ''
+    puts "Verification challenge received: #{challenge[0, 8]}..."
+    return { challenge: challenge }.to_json
+  end
+
+  # Get headers for regular events
   signature = request.env['HTTP_X_SENDSEVEN_SIGNATURE'] || ''
   timestamp = request.env['HTTP_X_SENDSEVEN_TIMESTAMP'] || ''
   delivery_id = request.env['HTTP_X_SENDSEVEN_DELIVERY_ID'] || ''
@@ -82,26 +101,21 @@ post '/webhooks/sendseven' do
     halt 400, { error: 'Missing required headers' }.to_json
   end
 
-  # Read body
-  payload = request.body.read
-
   # Verify signature
   if !WEBHOOK_SECRET.empty? && !verify_signature(payload, signature, timestamp)
     puts "Invalid signature for delivery #{delivery_id}"
     halt 401, { error: 'Invalid signature' }.to_json
   end
 
-  # Parse payload
-  begin
-    data = JSON.parse(payload)
-  rescue JSON::ParserError
-    halt 400, { error: 'Invalid JSON' }.to_json
-  end
-
   type = data['type'] || ''
   tenant_id = data['tenant_id'] || ''
 
   puts "Webhook received: delivery_id=#{delivery_id}, event=#{type}, tenant=#{tenant_id}"
+
+  # Log full payload if debugging is enabled
+  if LOG_PAYLOADS
+    puts "Full payload:\n#{JSON.pretty_generate(data)}"
+  end
 
   # Handle different event types
   begin
@@ -118,8 +132,20 @@ post '/webhooks/sendseven' do
       handle_conversation_created(data)
     when 'conversation.closed'
       handle_conversation_closed(data)
+    when 'conversation.assigned'
+      handle_conversation_assigned(data)
     when 'contact.created'
       handle_contact_created(data)
+    when 'contact.updated'
+      handle_contact_updated(data)
+    when 'contact.deleted'
+      handle_contact_deleted(data)
+    when 'contact.subscribed'
+      handle_contact_subscribed(data)
+    when 'contact.unsubscribed'
+      handle_contact_unsubscribed(data)
+    when 'link.clicked'
+      handle_link_clicked(data)
     else
       puts "  Unknown event type: #{type}"
     end
@@ -165,6 +191,12 @@ def handle_conversation_closed(payload)
   puts "  Conversation closed: #{conv_id}"
 end
 
+def handle_conversation_assigned(payload)
+  conv_id = payload.dig('data', 'conversation', 'id')
+  assigned_to = payload.dig('data', 'assigned_to', 'name') || 'Unknown'
+  puts "  Conversation #{conv_id} assigned to #{assigned_to}"
+end
+
 def handle_contact_created(payload)
   contact = payload.dig('data', 'contact') || {}
   name = contact['name'] || 'Unknown'
@@ -172,5 +204,40 @@ def handle_contact_created(payload)
   puts "  Contact created: #{name} (#{phone})"
 end
 
+def handle_contact_updated(payload)
+  contact_id = payload.dig('data', 'contact', 'id')
+  puts "  Contact updated: #{contact_id}"
+end
+
+def handle_contact_deleted(payload)
+  contact = payload.dig('data', 'contact') || {}
+  contact_id = contact['id']
+  name = contact['name'] || 'Unknown'
+  puts "  Contact deleted: #{contact_id} (#{name})"
+end
+
+def handle_contact_subscribed(payload)
+  contact = payload.dig('data', 'contact') || {}
+  list_id = payload.dig('data', 'subscription', 'list_id')
+  name = contact['name'] || 'Unknown'
+  puts "  Contact #{name} subscribed to list #{list_id}"
+end
+
+def handle_contact_unsubscribed(payload)
+  contact = payload.dig('data', 'contact') || {}
+  list_id = payload.dig('data', 'subscription', 'list_id')
+  name = contact['name'] || 'Unknown'
+  puts "  Contact #{name} unsubscribed from list #{list_id}"
+end
+
+def handle_link_clicked(payload)
+  link = payload.dig('data', 'link') || {}
+  contact = payload.dig('data', 'contact') || {}
+  url = link['url'] || 'Unknown URL'
+  name = contact['name'] || 'Unknown'
+  puts "  Link clicked: #{url} by #{name}"
+end
+
 puts "Webhook server listening on port #{PORT}"
+puts "Payload logging: #{LOG_PAYLOADS ? 'ENABLED' : 'disabled'}"
 puts "Webhook endpoint: http://localhost:#{PORT}/webhooks/sendseven"

@@ -14,11 +14,13 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
 
 var webhookSecret string
+var logPayloads bool
 
 // WebhookPayload represents the incoming webhook structure
 type WebhookPayload struct {
@@ -33,6 +35,8 @@ type WebhookPayload struct {
 func init() {
 	godotenv.Load()
 	webhookSecret = os.Getenv("WEBHOOK_SECRET")
+	logPayloadsEnv := strings.ToLower(os.Getenv("LOG_PAYLOADS"))
+	logPayloads = logPayloadsEnv == "true" || logPayloadsEnv == "1" || logPayloadsEnv == "yes"
 }
 
 // verifySignature verifies the webhook HMAC-SHA256 signature
@@ -81,7 +85,32 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get headers
+	// Read body first
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, `{"error": "Failed to read body"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Parse payload to check for verification challenge
+	var payload WebhookPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		http.Error(w, `{"error": "Invalid JSON"}`, http.StatusBadRequest)
+		return
+	}
+
+	// Handle verification challenges (no signature verification needed)
+	// SendSeven sends this when you create/update a webhook to verify ownership
+	if payload.Type == "sendseven_verification" {
+		challenge := payload.Data["challenge"].(string)
+		log.Printf("Verification challenge received: %s...", challenge[:8])
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{"challenge": challenge})
+		return
+	}
+
+	// Get headers for regular events
 	signature := r.Header.Get("X-Sendseven-Signature")
 	timestamp := r.Header.Get("X-Sendseven-Timestamp")
 	deliveryID := r.Header.Get("X-Sendseven-Delivery-Id")
@@ -94,13 +123,6 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read body
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, `{"error": "Failed to read body"}`, http.StatusBadRequest)
-		return
-	}
-
 	// Verify signature
 	if webhookSecret != "" && !verifySignature(body, signature, timestamp) {
 		log.Printf("Invalid signature for delivery %s", deliveryID)
@@ -108,15 +130,14 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse payload
-	var payload WebhookPayload
-	if err := json.Unmarshal(body, &payload); err != nil {
-		http.Error(w, `{"error": "Invalid JSON"}`, http.StatusBadRequest)
-		return
-	}
-
 	log.Printf("Webhook received: delivery_id=%s, event=%s, tenant=%s",
 		deliveryID, payload.Type, payload.TenantID)
+
+	// Log full payload if debugging is enabled
+	if logPayloads {
+		prettyJSON, _ := json.MarshalIndent(payload, "", "  ")
+		log.Printf("Full payload:\n%s", string(prettyJSON))
+	}
 
 	// Handle different event types
 	switch payload.Type {
@@ -132,8 +153,20 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		handleConversationCreated(payload)
 	case "conversation.closed":
 		handleConversationClosed(payload)
+	case "conversation.assigned":
+		handleConversationAssigned(payload)
 	case "contact.created":
 		handleContactCreated(payload)
+	case "contact.updated":
+		handleContactUpdated(payload)
+	case "contact.deleted":
+		handleContactDeleted(payload)
+	case "contact.subscribed":
+		handleContactSubscribed(payload)
+	case "contact.unsubscribed":
+		handleContactUnsubscribed(payload)
+	case "link.clicked":
+		handleLinkClicked(payload)
 	default:
 		log.Printf("  Unknown event type: %s", payload.Type)
 	}
@@ -201,6 +234,17 @@ func handleConversationClosed(payload WebhookPayload) {
 	}
 }
 
+func handleConversationAssigned(payload WebhookPayload) {
+	if conv, ok := payload.Data["conversation"].(map[string]interface{}); ok {
+		assignedTo := payload.Data["assigned_to"].(map[string]interface{})
+		name := "Unknown"
+		if n, ok := assignedTo["name"].(string); ok {
+			name = n
+		}
+		log.Printf("  Conversation %v assigned to %s", conv["id"], name)
+	}
+}
+
 func handleContactCreated(payload WebhookPayload) {
 	if contact, ok := payload.Data["contact"].(map[string]interface{}); ok {
 		name := "Unknown"
@@ -213,6 +257,58 @@ func handleContactCreated(payload WebhookPayload) {
 		}
 		log.Printf("  Contact created: %s (%s)", name, phone)
 	}
+}
+
+func handleContactUpdated(payload WebhookPayload) {
+	if contact, ok := payload.Data["contact"].(map[string]interface{}); ok {
+		log.Printf("  Contact updated: %v", contact["id"])
+	}
+}
+
+func handleContactDeleted(payload WebhookPayload) {
+	if contact, ok := payload.Data["contact"].(map[string]interface{}); ok {
+		name := "Unknown"
+		if n, ok := contact["name"].(string); ok {
+			name = n
+		}
+		log.Printf("  Contact deleted: %v (%s)", contact["id"], name)
+	}
+}
+
+func handleContactSubscribed(payload WebhookPayload) {
+	if contact, ok := payload.Data["contact"].(map[string]interface{}); ok {
+		name := "Unknown"
+		if n, ok := contact["name"].(string); ok {
+			name = n
+		}
+		subscription := payload.Data["subscription"].(map[string]interface{})
+		log.Printf("  Contact %s subscribed to list %v", name, subscription["list_id"])
+	}
+}
+
+func handleContactUnsubscribed(payload WebhookPayload) {
+	if contact, ok := payload.Data["contact"].(map[string]interface{}); ok {
+		name := "Unknown"
+		if n, ok := contact["name"].(string); ok {
+			name = n
+		}
+		subscription := payload.Data["subscription"].(map[string]interface{})
+		log.Printf("  Contact %s unsubscribed from list %v", name, subscription["list_id"])
+	}
+}
+
+func handleLinkClicked(payload WebhookPayload) {
+	link := payload.Data["link"].(map[string]interface{})
+	contact := payload.Data["contact"].(map[string]interface{})
+	url := "Unknown URL"
+	if u, ok := link["url"].(string); ok {
+		url = u
+	}
+	name := "Unknown"
+	if n, ok := contact["name"].(string); ok {
+		name = n
+	}
+	log.Printf("  Link clicked: %s by %s", url, name)
 }
 
 func main() {
@@ -228,6 +324,11 @@ func main() {
 	http.HandleFunc("/webhooks/sendseven", webhookHandler)
 
 	log.Printf("Webhook server listening on port %s", port)
+	if logPayloads {
+		log.Println("Payload logging: ENABLED")
+	} else {
+		log.Println("Payload logging: disabled")
+	}
 	log.Printf("Webhook endpoint: http://localhost:%s/webhooks/sendseven", port)
 
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
