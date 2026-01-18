@@ -100,6 +100,7 @@ def handle_webhook():
 
     # Handle different event types
     try:
+        # Message events (WhatsApp, Telegram, SMS, etc.)
         if event_type_key == "message.received":
             handle_message_received(payload)
         elif event_type_key == "message.sent":
@@ -108,12 +109,34 @@ def handle_webhook():
             handle_message_delivered(payload)
         elif event_type_key == "message.failed":
             handle_message_failed(payload)
+        elif event_type_key == "message.read":
+            handle_message_read(payload)
+
+        # Email events
+        elif event_type_key == "email.received":
+            handle_email_received(payload)
+        elif event_type_key == "email.sent":
+            handle_email_sent(payload)
+        elif event_type_key == "email.delivered":
+            handle_email_delivered(payload)
+        elif event_type_key == "email.bounced":
+            handle_email_bounced(payload)
+        elif event_type_key == "email.opened":
+            handle_email_opened(payload)
+        elif event_type_key == "email.complained":
+            handle_email_complained(payload)
+
+        # Conversation events
         elif event_type_key == "conversation.created":
             handle_conversation_created(payload)
         elif event_type_key == "conversation.closed":
             handle_conversation_closed(payload)
         elif event_type_key == "conversation.assigned":
             handle_conversation_assigned(payload)
+        elif event_type_key == "conversation.reopened":
+            handle_conversation_reopened(payload)
+
+        # Contact events
         elif event_type_key == "contact.created":
             handle_contact_created(payload)
         elif event_type_key == "contact.updated":
@@ -124,6 +147,8 @@ def handle_webhook():
             handle_contact_subscribed(payload)
         elif event_type_key == "contact.unsubscribed":
             handle_contact_unsubscribed(payload)
+
+        # Tracking events
         elif event_type_key == "link.clicked":
             handle_link_clicked(payload)
         else:
@@ -167,6 +192,68 @@ def handle_message_failed(payload: dict):
     print(f"  Message failed: {message.get('id')} - {error.get('message', 'Unknown error')}")
 
 
+def handle_message_read(payload: dict):
+    """Process message.read event."""
+    data = payload.get("data", {})
+    message = data.get("message", {})
+    print(f"  Message read: {message.get('id')}")
+
+
+# ============================================================================
+# Email Event Handlers
+# ============================================================================
+
+def handle_email_received(payload: dict):
+    """Process email.received event."""
+    data = payload.get("data", {})
+    email = data.get("email", {})
+    contact = data.get("contact", {})
+    print(f"  Email received from {email.get('from_email', 'Unknown')}: {email.get('subject', 'No subject')[:50]}")
+
+
+def handle_email_sent(payload: dict):
+    """Process email.sent event."""
+    data = payload.get("data", {})
+    email = data.get("email", {})
+    print(f"  Email sent: {email.get('id')} to {email.get('to_emails', [])}")
+
+
+def handle_email_delivered(payload: dict):
+    """Process email.delivered event."""
+    data = payload.get("data", {})
+    email = data.get("email", {})
+    print(f"  Email delivered: {email.get('id')} (message_id: {email.get('message_id', 'N/A')})")
+
+
+def handle_email_bounced(payload: dict):
+    """Process email.bounced event."""
+    data = payload.get("data", {})
+    email = data.get("email", {})
+    bounce_type = data.get("bounce_type", "unknown")
+    bounce_subtype = data.get("bounce_subtype", "")
+    print(f"  Email bounced: {email.get('id')} - {bounce_type}/{bounce_subtype}")
+
+
+def handle_email_opened(payload: dict):
+    """Process email.opened event."""
+    data = payload.get("data", {})
+    email = data.get("email", {})
+    open_count = data.get("open_count", 1)
+    print(f"  Email opened: {email.get('id')} (open_count: {open_count})")
+
+
+def handle_email_complained(payload: dict):
+    """Process email.complained event (spam report)."""
+    data = payload.get("data", {})
+    email = data.get("email", {})
+    complaint_type = data.get("complaint_type", "unknown")
+    print(f"  Email complained (spam report): {email.get('id')} - {complaint_type}")
+
+
+# ============================================================================
+# Conversation Event Handlers
+# ============================================================================
+
 def handle_conversation_created(payload: dict):
     """Process conversation.created event."""
     data = payload.get("data", {})
@@ -188,6 +275,17 @@ def handle_conversation_assigned(payload: dict):
     assigned_to = data.get("assigned_to", {})
     print(f"  Conversation {conversation.get('id')} assigned to {assigned_to.get('name', 'Unknown')}")
 
+
+def handle_conversation_reopened(payload: dict):
+    """Process conversation.reopened event."""
+    data = payload.get("data", {})
+    conversation = data.get("conversation", {})
+    print(f"  Conversation reopened: {conversation.get('id')}")
+
+
+# ============================================================================
+# Contact Event Handlers
+# ============================================================================
 
 def handle_contact_created(payload: dict):
     """Process contact.created event."""
