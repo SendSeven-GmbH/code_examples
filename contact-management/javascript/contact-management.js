@@ -16,7 +16,7 @@ const API_URL = process.env.SENDSEVEN_API_URL || 'https://api.sendseven.com/api/
  */
 function getHeaders() {
   return {
-    'Authorization': `Bearer ${API_TOKEN}`,
+    'X-API-Key': API_TOKEN,  // API token authentication
     'X-Tenant-ID': TENANT_ID,
     'Content-Type': 'application/json',
   };
@@ -169,7 +169,12 @@ async function main() {
     console.log(`   Total contacts: ${contactsResponse.pagination.total}`);
     console.log(`   Page ${contactsResponse.pagination.page} of ${contactsResponse.pagination.total_pages}`);
     contactsResponse.items.slice(0, 3).forEach(c => {
-      const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed';
+      // Build display name from first/last name or use identifiers as fallback
+      let name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+      if (!name) {
+        // Fallback to phone/email/ID for contacts without names
+        name = c.phone || c.email || `Contact ${c.id.substring(0, 8)}...`;
+      }
       console.log(`   - ${c.id}: ${name}`);
     });
 

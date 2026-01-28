@@ -166,8 +166,11 @@ def handle_message_received(payload: dict):
     data = payload.get("data", {})
     message = data.get("message", {})
     contact = data.get("contact", {})
-
-    print(f"  Message received from {contact.get('name', 'Unknown')}: {message.get('text', '')[:50]}")
+    # Build contact name from first/last or use fallback
+    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    if not contact_name:
+        contact_name = contact.get("phone") or contact.get("email") or "Unknown"
+    print(f"  Message received from {contact_name}: {message.get('text', '')[:50]}")
 
 
 def handle_message_sent(payload: dict):
@@ -291,7 +294,11 @@ def handle_contact_created(payload: dict):
     """Process contact.created event."""
     data = payload.get("data", {})
     contact = data.get("contact", {})
-    print(f"  Contact created: {contact.get('name', 'Unknown')} ({contact.get('phone', 'No phone')})")
+    # Build contact name from first/last or use fallback
+    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    if not contact_name:
+        contact_name = contact.get("phone") or contact.get("email") or "Unknown"
+    print(f"  Contact created: {contact_name} ({contact.get('phone', 'No phone')})")
 
 
 def handle_contact_updated(payload: dict):
@@ -306,7 +313,11 @@ def handle_contact_deleted(payload: dict):
     """Process contact.deleted event."""
     data = payload.get("data", {})
     contact = data.get("contact", {})
-    print(f"  Contact deleted: {contact.get('id')} ({contact.get('name', 'Unknown')})")
+    # Build contact name from first/last or use fallback
+    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    if not contact_name:
+        contact_name = contact.get("phone") or contact.get("email") or "Unknown"
+    print(f"  Contact deleted: {contact.get('id')} ({contact_name})")
 
 
 def handle_contact_subscribed(payload: dict):
@@ -314,7 +325,11 @@ def handle_contact_subscribed(payload: dict):
     data = payload.get("data", {})
     contact = data.get("contact", {})
     subscription = data.get("subscription", {})
-    print(f"  Contact {contact.get('name', 'Unknown')} subscribed to list {subscription.get('list_id')}")
+    # Build contact name from first/last or use fallback
+    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    if not contact_name:
+        contact_name = contact.get("phone") or contact.get("email") or "Unknown"
+    print(f"  Contact {contact_name} subscribed to list {subscription.get('list_id')}")
 
 
 def handle_contact_unsubscribed(payload: dict):
@@ -322,7 +337,11 @@ def handle_contact_unsubscribed(payload: dict):
     data = payload.get("data", {})
     contact = data.get("contact", {})
     subscription = data.get("subscription", {})
-    print(f"  Contact {contact.get('name', 'Unknown')} unsubscribed from list {subscription.get('list_id')}")
+    # Build contact name from first/last or use fallback
+    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    if not contact_name:
+        contact_name = contact.get("phone") or contact.get("email") or "Unknown"
+    print(f"  Contact {contact_name} unsubscribed from list {subscription.get('list_id')}")
 
 
 def handle_link_clicked(payload: dict):
@@ -330,7 +349,11 @@ def handle_link_clicked(payload: dict):
     data = payload.get("data", {})
     link = data.get("link", {})
     contact = data.get("contact", {})
-    print(f"  Link clicked: {link.get('url', 'Unknown URL')} by {contact.get('name', 'Unknown')}")
+    # Build contact name from first/last or use fallback
+    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    if not contact_name:
+        contact_name = contact.get("phone") or contact.get("email") or "Unknown"
+    print(f"  Link clicked: {link.get('url', 'Unknown URL')} by {contact_name}")
 
 
 if __name__ == "__main__":

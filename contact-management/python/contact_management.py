@@ -22,7 +22,7 @@ API_URL = os.getenv("SENDSEVEN_API_URL", "https://api.sendseven.com/api/v1")
 def get_headers() -> dict:
     """Get common headers for API requests."""
     return {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "X-API-Key": API_TOKEN,  # API token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }
@@ -216,7 +216,11 @@ def main():
         print(f"   Total contacts: {contacts_response['pagination']['total']}")
         print(f"   Page {contacts_response['pagination']['page']} of {contacts_response['pagination']['total_pages']}")
         for c in contacts_response["items"][:3]:  # Show first 3
-            name = f"{c.get('first_name', '')} {c.get('last_name', '')}".strip() or "Unnamed"
+            # Build display name from first/last name or use identifiers as fallback
+            name = f"{c.get('first_name', '')} {c.get('last_name', '')}".strip()
+            if not name:
+                # Fallback to phone/email/ID for contacts without names
+                name = c.get('phone') or c.get('email') or f"Contact {c['id'][:8]}..."
             print(f"   - {c['id']}: {name}")
 
         # 3. Get single contact

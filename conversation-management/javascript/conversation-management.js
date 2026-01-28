@@ -16,7 +16,7 @@ const API_URL = process.env.SENDSEVEN_API_URL || 'https://api.sendseven.com/api/
  */
 function getHeaders() {
   return {
-    'Authorization': `Bearer ${API_TOKEN}`,
+    'X-API-Key': API_TOKEN,  // API token authentication
     'X-Tenant-ID': TENANT_ID,
     'Content-Type': 'application/json',
   };
@@ -26,10 +26,12 @@ function getHeaders() {
  * List conversations with optional filtering.
  *
  * @param {Object} options - Filter options
- * @param {string} [options.status] - Filter by status ('open', 'closed', 'pending')
+ * @param {string} [options.status] - Filter by status ('open', 'closed') - 'open' includes OPEN and ASSIGNED
  * @param {boolean} [options.needsReply] - Filter to conversations awaiting reply
- * @param {string} [options.assignedTo] - Filter by assigned user ID
+ * @param {string} [options.assignedTo] - Filter by assignment: 'me', 'unassigned', or user_id
  * @param {string} [options.channel] - Filter by channel
+ * @param {string} [options.contactId] - Filter by contact ID
+ * @param {string} [options.search] - Search by contact name, phone, email, or subject
  * @param {number} [options.page=1] - Page number
  * @param {number} [options.pageSize=20] - Items per page
  * @returns {Promise<Object>} Paginated list of conversations
@@ -43,6 +45,8 @@ async function listConversations(options = {}) {
   if (options.needsReply !== undefined) params.append('needs_reply', options.needsReply);
   if (options.assignedTo) params.append('assigned_to', options.assignedTo);
   if (options.channel) params.append('channel', options.channel);
+  if (options.contactId) params.append('contact_id', options.contactId);
+  if (options.search) params.append('search', options.search);
 
   const response = await fetch(`${API_URL}/conversations?${params}`, {
     method: 'GET',
@@ -155,9 +159,10 @@ async function main() {
 
     for (const conv of result.items) {
       console.log(`  ID: ${conv.id}`);
-      console.log(`  Channel: ${conv.channel}`);
+      console.log(`  Channel: ${conv.channel_type || conv.channel || 'N/A'}`);
       console.log(`  Status: ${conv.status}`);
-      console.log(`  Last message: ${conv.last_message_at || 'N/A'}`);
+      console.log(`  Needs reply: ${conv.needs_reply || false}`);
+      console.log(`  Last customer message: ${conv.last_customer_message_at || 'N/A'}`);
       console.log();
     }
 
@@ -171,12 +176,17 @@ async function main() {
 
       const conversation = await getConversation(conversationId);
       console.log(`  ID: ${conversation.id}`);
-      console.log(`  Channel: ${conversation.channel}`);
+      console.log(`  Channel: ${conversation.channel_type || conversation.channel || 'N/A'}`);
       console.log(`  Status: ${conversation.status}`);
       console.log(`  Needs reply: ${conversation.needs_reply || false}`);
-      console.log(`  Assigned to: ${conversation.assigned_to || 'Unassigned'}`);
+      console.log(`  Assigned to: ${conversation.assigned_user_id || 'Unassigned'}`);
       if (conversation.contact) {
-        console.log(`  Contact: ${conversation.contact.name || 'Unknown'}`);
+        // Build display name from first/last name or use identifier fallbacks
+        let name = `${conversation.contact.first_name || ''} ${conversation.contact.last_name || ''}`.trim();
+        if (!name) {
+          name = conversation.contact.phone || conversation.contact.email || 'Unnamed Contact';
+        }
+        console.log(`  Contact: ${name}`);
       }
       console.log();
 

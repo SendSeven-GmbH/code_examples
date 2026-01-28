@@ -87,7 +87,7 @@ interface TemplatesResponse {
  */
 function getHeaders(): Record<string, string> {
   return {
-    'Authorization': `Bearer ${API_TOKEN}`,
+    'X-API-Key': API_TOKEN!,  // API token authentication
     'X-Tenant-ID': TENANT_ID!,
     'Content-Type': 'application/json',
   };

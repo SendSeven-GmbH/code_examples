@@ -37,11 +37,15 @@ interface WebhookPayload {
       message_type: string;
       text?: string;
       status: string;
+      from?: string;  // External ID for inbound messages
+      from_id?: string;  // Alias for from
     };
     contact?: {
       id: string;
-      name?: string;
+      first_name?: string;
+      last_name?: string;
       phone?: string;
+      email?: string;
     };
   };
 }
@@ -98,16 +102,17 @@ function verifySignature(payload: object, signature: string, timestamp: string):
 /**
  * Send a reply message to a conversation.
  */
-async function sendReply(conversationId: string, text: string): Promise<Message> {
+async function sendReply(conversationId: string, text: string, to: string = ''): Promise<Message> {
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`,
+      'X-API-Key': API_TOKEN,  // API token authentication
       'X-Tenant-ID': TENANT_ID,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       conversation_id: conversationId,
+      to: to,  // Recipient external ID
       text: text,
       message_type: 'text',
     }),
@@ -183,7 +188,13 @@ app.post('/webhooks/sendseven', async (req: WebhookRequest, res: Response) => {
   const conversationId = message.conversation_id;
   const messageType = message.message_type || 'text';
   const messageText = message.text || '';
-  const contactName = contact?.name || 'there';
+  // Get sender ID for reply (from external ID in inbound message)
+  const senderId = message.from || message.from_id || '';
+  // Build contact name from first/last or use fallback
+  let contactName = `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
+  if (!contactName) {
+    contactName = contact?.phone || contact?.email || 'there';
+  }
 
   console.log(`Received message from ${contactName}: ${messageText.slice(0, 50) || '[media]'}`);
 
@@ -191,7 +202,7 @@ app.post('/webhooks/sendseven', async (req: WebhookRequest, res: Response) => {
   const replyText = generateReply(messageType, messageText);
 
   try {
-    const result = await sendReply(conversationId, replyText);
+    const result = await sendReply(conversationId, replyText, senderId);
     console.log(`Reply sent: ${result.id}`);
     processedDeliveries.add(deliveryId);
   } catch (error) {

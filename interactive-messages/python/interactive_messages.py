@@ -24,7 +24,7 @@ CONTACT_ID = os.getenv("CONTACT_ID")
 def get_headers() -> dict:
     """Get common headers for API requests."""
     return {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "X-API-Key": API_TOKEN,  # API token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }

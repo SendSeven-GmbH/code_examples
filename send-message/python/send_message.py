@@ -19,13 +19,14 @@ API_URL = os.getenv("SENDSEVEN_API_URL", "https://api.sendseven.com/api/v1")
 CONVERSATION_ID = os.getenv("CONVERSATION_ID")
 
 
-def send_message(conversation_id: str, text: str) -> dict:
+def send_message(conversation_id: str, text: str, to: str = None) -> dict:
     """
     Send a text message to a conversation.
 
     Args:
         conversation_id: The UUID of the conversation
         text: The message text to send
+        to: Optional recipient external ID (phone, telegram_id, etc.)
 
     Returns:
         dict: The created message object
@@ -36,13 +37,14 @@ def send_message(conversation_id: str, text: str) -> dict:
     url = f"{API_URL}/messages"
 
     headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "X-API-Key": API_TOKEN,  # API token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }
 
     payload = {
         "conversation_id": conversation_id,
+        "to": to or "",  # Required field - recipient external ID
         "text": text,
         "message_type": "text",
     }

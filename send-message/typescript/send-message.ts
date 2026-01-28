@@ -18,15 +18,24 @@ const CONVERSATION_ID = process.env.CONVERSATION_ID;
 interface Message {
   id: string;
   conversation_id: string;
+  platform?: string;  // Channel type: whatsapp, telegram, etc.
+  channel_id?: string;
+  contact_id?: string;
   direction: 'inbound' | 'outbound';
   message_type: string;
-  text: string;
+  text: string | null;
   status: 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
+  from?: string | null;  // External ID for inbound messages
+  to?: string | null;    // External ID for outbound messages
   created_at: string;
+  sent_at?: string | null;
+  delivered_at?: string | null;
+  read_at?: string | null;
 }
 
 interface SendMessageRequest {
   conversation_id: string;
+  to: string;  // Required - recipient external ID
   text: string;
   message_type: 'text';
 }
@@ -34,9 +43,10 @@ interface SendMessageRequest {
 /**
  * Send a text message to a conversation.
  */
-async function sendMessage(conversationId: string, text: string): Promise<Message> {
+async function sendMessage(conversationId: string, text: string, to: string = ''): Promise<Message> {
   const payload: SendMessageRequest = {
     conversation_id: conversationId,
+    to: to,  // Required - recipient external ID
     text: text,
     message_type: 'text',
   };
@@ -44,7 +54,7 @@ async function sendMessage(conversationId: string, text: string): Promise<Messag
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`,
+      'X-API-Key': API_TOKEN!,  // API token authentication
       'X-Tenant-ID': TENANT_ID!,
       'Content-Type': 'application/json',
     },

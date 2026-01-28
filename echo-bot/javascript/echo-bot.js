@@ -55,16 +55,17 @@ function verifySignature(payload, signature, timestamp) {
 /**
  * Send a reply message
  */
-async function sendReply(conversationId, text) {
+async function sendReply(conversationId, text, to = '') {
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`,
+      'X-API-Key': API_TOKEN,  // API token authentication
       'X-Tenant-ID': TENANT_ID,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       conversation_id: conversationId,
+      to: to,  // Recipient external ID
       text: text,
       message_type: 'text',
     }),
@@ -120,7 +121,13 @@ app.post('/webhooks/sendseven', async (req, res) => {
   const conversationId = message.conversation_id;
   const messageType = message.message_type || 'text';
   const messageText = message.text || '';
-  const contactName = contact.name || 'there';
+  // Get sender ID for reply (from external ID in inbound message)
+  const senderId = message.from || message.from_id || '';
+  // Build contact name from first/last or use fallback
+  let contactName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
+  if (!contactName) {
+    contactName = contact.phone || contact.email || 'there';
+  }
 
   console.log(`Received message from ${contactName}: ${messageText.slice(0, 50) || '[media]'}`);
 
@@ -148,7 +155,7 @@ app.post('/webhooks/sendseven', async (req, res) => {
 
   // Send reply
   try {
-    const result = await sendReply(conversationId, replyText);
+    const result = await sendReply(conversationId, replyText, senderId);
     console.log(`Reply sent: ${result.id}`);
     processedDeliveries.add(deliveryId);
   } catch (error) {

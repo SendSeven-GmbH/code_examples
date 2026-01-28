@@ -24,7 +24,7 @@ const CONTACT_ID = process.env.CONTACT_ID;
  */
 function getHeaders() {
   return {
-    'Authorization': `Bearer ${API_TOKEN}`,
+    'X-API-Key': API_TOKEN,  // API token authentication
     'X-Tenant-ID': TENANT_ID,
     'Content-Type': 'application/json',
   };

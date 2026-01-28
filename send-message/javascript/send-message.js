@@ -17,18 +17,20 @@ const CONVERSATION_ID = process.env.CONVERSATION_ID;
  *
  * @param {string} conversationId - The UUID of the conversation
  * @param {string} text - The message text to send
+ * @param {string} [to] - Optional recipient external ID (phone, telegram_id, etc.)
  * @returns {Promise<Object>} The created message object
  */
-async function sendMessage(conversationId, text) {
+async function sendMessage(conversationId, text, to = '') {
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${API_TOKEN}`,
+      'X-API-Key': API_TOKEN,  // API token authentication
       'X-Tenant-ID': TENANT_ID,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       conversation_id: conversationId,
+      to: to,  // Required field - recipient external ID
       text: text,
       message_type: 'text',
     }),

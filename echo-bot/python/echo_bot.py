@@ -47,18 +47,19 @@ def verify_signature(payload: bytes, signature: str, timestamp: str) -> bool:
     return hmac.compare_digest(expected_sig, provided_sig)
 
 
-def send_reply(conversation_id: str, text: str) -> dict:
+def send_reply(conversation_id: str, text: str, to: str = "") -> dict:
     """Send a reply message to a conversation."""
     url = f"{API_URL}/messages"
 
     headers = {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "X-API-Key": API_TOKEN,  # API token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }
 
     payload = {
         "conversation_id": conversation_id,
+        "to": to,  # Recipient external ID
         "text": text,
         "message_type": "text",
     }
@@ -110,7 +111,12 @@ def handle_webhook():
     conversation_id = message.get("conversation_id")
     message_type = message.get("message_type", "text")
     message_text = message.get("text", "")
-    contact_name = contact.get("name", "there")
+    # Get sender ID for reply (from external ID in inbound message)
+    sender_id = message.get("from") or message.get("from_id", "")
+    # Build contact name from first/last or use fallback
+    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+    if not contact_name:
+        contact_name = contact.get("phone") or contact.get("email") or "there"
 
     print(f"Received message from {contact_name}: {message_text[:50] if message_text else '[media]'}")
 
@@ -130,7 +136,7 @@ def handle_webhook():
 
     # Send the reply
     try:
-        result = send_reply(conversation_id, reply_text)
+        result = send_reply(conversation_id, reply_text, sender_id)
         print(f"Reply sent: {result.get('id')}")
         processed_deliveries.add(delivery_id)
     except requests.HTTPError as e:

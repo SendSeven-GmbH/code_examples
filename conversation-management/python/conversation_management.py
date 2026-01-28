@@ -24,7 +24,7 @@ API_URL = os.getenv("SENDSEVEN_API_URL", "https://api.sendseven.com/api/v1")
 def get_headers() -> dict:
     """Get common headers for API requests."""
     return {
-        "Authorization": f"Bearer {API_TOKEN}",
+        "X-API-Key": API_TOKEN,  # API token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }
@@ -35,6 +35,8 @@ def list_conversations(
     needs_reply: Optional[bool] = None,
     assigned_to: Optional[str] = None,
     channel: Optional[str] = None,
+    contact_id: Optional[str] = None,
+    search: Optional[str] = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict:
@@ -42,10 +44,12 @@ def list_conversations(
     List conversations with optional filtering.
 
     Args:
-        status: Filter by status ('open', 'closed', 'pending')
+        status: Filter by status ('open', 'closed') - 'open' includes both OPEN and ASSIGNED
         needs_reply: Filter to conversations awaiting reply
-        assigned_to: Filter by assigned user ID
+        assigned_to: Filter by assignment: 'me', 'unassigned', or user_id
         channel: Filter by channel ('whatsapp', 'telegram', 'sms', 'email', etc.)
+        contact_id: Filter by contact ID
+        search: Search by contact name, phone, email, or conversation subject
         page: Page number (default: 1)
         page_size: Items per page (default: 20, max: 100)
 
@@ -65,6 +69,10 @@ def list_conversations(
         params["assigned_to"] = assigned_to
     if channel:
         params["channel"] = channel
+    if contact_id:
+        params["contact_id"] = contact_id
+    if search:
+        params["search"] = search
 
     url = f"{API_URL}/conversations?{urlencode(params)}"
     response = requests.get(url, headers=get_headers())
@@ -163,9 +171,10 @@ def main():
 
         for conv in result["items"]:
             print(f"  ID: {conv['id']}")
-            print(f"  Channel: {conv['channel']}")
+            print(f"  Channel: {conv.get('channel_type', conv.get('channel', 'N/A'))}")
             print(f"  Status: {conv['status']}")
-            print(f"  Last message: {conv.get('last_message_at', 'N/A')}")
+            print(f"  Needs reply: {conv.get('needs_reply', False)}")
+            print(f"  Last customer message: {conv.get('last_customer_message_at', 'N/A')}")
             print()
 
         # Example 2: Get a single conversation (if we have any)
@@ -178,12 +187,17 @@ def main():
 
             conversation = get_conversation(conversation_id)
             print(f"  ID: {conversation['id']}")
-            print(f"  Channel: {conversation['channel']}")
+            print(f"  Channel: {conversation.get('channel_type', conversation.get('channel', 'N/A'))}")
             print(f"  Status: {conversation['status']}")
             print(f"  Needs reply: {conversation.get('needs_reply', False)}")
-            print(f"  Assigned to: {conversation.get('assigned_to', 'Unassigned')}")
-            if "contact" in conversation:
-                print(f"  Contact: {conversation['contact'].get('name', 'Unknown')}")
+            print(f"  Assigned to: {conversation.get('assigned_user_id', 'Unassigned')}")
+            if "contact" in conversation and conversation["contact"]:
+                contact = conversation["contact"]
+                # Build display name from first/last name or use identifier fallbacks
+                name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
+                if not name:
+                    name = contact.get('phone') or contact.get('email') or "Unnamed Contact"
+                print(f"  Contact: {name}")
             print()
 
             # Example 3: Demonstrate update (commented out to avoid modifying data)
