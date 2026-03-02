@@ -54,7 +54,7 @@ async function sendMessage(conversationId: string, text: string, to: string = ''
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
-      'X-API-Key': API_TOKEN!,  // API token authentication
+      'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
       'X-Tenant-ID': TENANT_ID!,
       'Content-Type': 'application/json',
     },

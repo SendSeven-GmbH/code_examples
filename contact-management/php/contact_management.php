@@ -151,17 +151,15 @@ function main(): void {
         // 1. Create a new contact
         echo "\n1. Creating a new contact...\n";
         $contact = createContact([
-            'phone_number' => '+1234567890',
+            'phone' => '+1234567890',
             'email' => 'john.doe@example.com',
-            'first_name' => 'John',
-            'last_name' => 'Doe',
-            'company' => 'Acme Inc',
+            'name' => 'John Doe',
         ]);
         $contactId = $contact['id'];
         echo "   Created contact: {$contactId}\n";
-        echo "   Name: {$contact['first_name']} {$contact['last_name']}\n";
+        echo "   Name: {$contact['name']}\n";
         echo "   Email: {$contact['email']}\n";
-        echo "   Phone: {$contact['phone_number']}\n";
+        echo "   Phone: {$contact['phone']}\n";
 
         // 2. List contacts
         echo "\n2. Listing contacts...\n";
@@ -169,7 +167,7 @@ function main(): void {
         echo "   Total contacts: {$contactsResponse['pagination']['total']}\n";
         echo "   Page {$contactsResponse['pagination']['page']} of {$contactsResponse['pagination']['total_pages']}\n";
         foreach (array_slice($contactsResponse['items'], 0, 3) as $c) {
-            $name = trim(($c['first_name'] ?? '') . ' ' . ($c['last_name'] ?? '')) ?: 'Unnamed';
+            $name = $c['name'] ?? $c['phone'] ?? $c['email'] ?? 'Unknown';
             echo "   - {$c['id']}: $name\n";
         }
 
@@ -177,17 +175,14 @@ function main(): void {
         echo "\n3. Getting contact {$contactId}...\n";
         $fetchedContact = getContact($contactId);
         echo "   ID: {$fetchedContact['id']}\n";
-        echo "   Name: {$fetchedContact['first_name']} {$fetchedContact['last_name']}\n";
-        echo "   Company: {$fetchedContact['company']}\n";
+        echo "   Name: {$fetchedContact['name']}\n";
 
         // 4. Update contact
         echo "\n4. Updating contact {$contactId}...\n";
         $updatedContact = updateContact($contactId, [
-            'first_name' => 'Jane',
-            'company' => 'New Company Inc',
+            'name' => 'Jane Doe',
         ]);
-        echo "   Updated name: {$updatedContact['first_name']} {$updatedContact['last_name']}\n";
-        echo "   Updated company: {$updatedContact['company']}\n";
+        echo "   Updated name: {$updatedContact['name']}\n";
 
         // 5. Delete contact
         echo "\n5. Deleting contact {$contactId}...\n";

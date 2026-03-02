@@ -21,7 +21,7 @@ This example demonstrates:
 Create a `.env` file or set these environment variables:
 
 ```bash
-SENDSEVEN_API_TOKEN=msgapi_your_token_here
+SENDSEVEN_API_TOKEN=s7_api_your_token_here
 SENDSEVEN_TENANT_ID=your-tenant-id
 SENDSEVEN_API_URL=https://api.sendseven.com/api/v1
 CONVERSATION_ID=your-conversation-id
@@ -32,7 +32,7 @@ CONVERSATION_ID=your-conversation-id
 ```http
 POST /api/v1/messages
 Content-Type: application/json
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 
 {

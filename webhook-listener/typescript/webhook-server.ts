@@ -39,8 +39,7 @@ interface WebhookPayload {
     };
     contact?: {
       id: string;
-      first_name?: string;
-      last_name?: string;
+      name?: string;
       phone?: string;
       email?: string;
     };
@@ -190,11 +189,7 @@ app.post('/webhooks/sendseven', (req: WebhookRequest, res: Response) => {
 
 function handleMessageReceived(payload: WebhookPayload): void {
   const { message, contact } = payload.data;
-  // Build contact name from first/last or use fallback
-  let contactName = `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
-  if (!contactName) {
-    contactName = contact?.phone || contact?.email || 'Unknown';
-  }
+  const contactName = contact?.name || contact?.phone || contact?.email || 'Unknown';
   console.log(`  Message received from ${contactName}: ${(message?.text || '').slice(0, 50)}`);
 }
 
@@ -225,11 +220,7 @@ function handleConversationAssigned(payload: WebhookPayload): void {
 
 function handleContactCreated(payload: WebhookPayload): void {
   const { contact } = payload.data;
-  // Build contact name from first/last or use fallback
-  let contactName = `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
-  if (!contactName) {
-    contactName = contact?.phone || contact?.email || 'Unknown';
-  }
+  const contactName = contact?.name || contact?.phone || contact?.email || 'Unknown';
   console.log(`  Contact created: ${contactName} (${contact?.phone || 'No phone'})`);
 }
 
@@ -240,31 +231,19 @@ function handleContactUpdated(payload: WebhookPayload): void {
 
 function handleContactDeleted(payload: WebhookPayload): void {
   const { contact } = payload.data;
-  // Build contact name from first/last or use fallback
-  let contactName = `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
-  if (!contactName) {
-    contactName = contact?.phone || contact?.email || 'Unknown';
-  }
+  const contactName = contact?.name || contact?.phone || contact?.email || 'Unknown';
   console.log(`  Contact deleted: ${contact?.id} (${contactName})`);
 }
 
 function handleContactSubscribed(payload: WebhookPayload): void {
   const { contact, subscription } = payload.data;
-  // Build contact name from first/last or use fallback
-  let contactName = `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
-  if (!contactName) {
-    contactName = contact?.phone || contact?.email || 'Unknown';
-  }
+  const contactName = contact?.name || contact?.phone || contact?.email || 'Unknown';
   console.log(`  Contact ${contactName} subscribed to list ${subscription?.list_id}`);
 }
 
 function handleContactUnsubscribed(payload: WebhookPayload): void {
   const { contact, subscription } = payload.data;
-  // Build contact name from first/last or use fallback
-  let contactName = `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
-  if (!contactName) {
-    contactName = contact?.phone || contact?.email || 'Unknown';
-  }
+  const contactName = contact?.name || contact?.phone || contact?.email || 'Unknown';
   console.log(`  Contact ${contactName} unsubscribed from list ${subscription?.list_id}`);
 }
 
@@ -272,11 +251,7 @@ function handleLinkClicked(payload: WebhookPayload): void {
   const data = payload.data as any;
   const link = data.link || {};
   const contact = data.contact || {};
-  // Build contact name from first/last or use fallback
-  let contactName = `${contact.first_name || ''} ${contact.last_name || ''}`.trim();
-  if (!contactName) {
-    contactName = contact.phone || contact.email || 'Unknown';
-  }
+  const contactName = contact.name || contact.phone || contact.email || 'Unknown';
   console.log(`  Link clicked: ${link.url || 'Unknown URL'} by ${contactName}`);
 }
 

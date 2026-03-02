@@ -23,7 +23,7 @@ This example demonstrates:
 Create a `.env` file or set these environment variables:
 
 ```bash
-SENDSEVEN_API_TOKEN=msgapi_your_token_here
+SENDSEVEN_API_TOKEN=s7_api_your_token_here
 SENDSEVEN_TENANT_ID=your-tenant-id
 SENDSEVEN_API_URL=https://api.sendseven.com/api/v1
 CHANNEL_ID=your-channel-id
@@ -39,7 +39,7 @@ Button messages allow users to choose from up to 3 options with a single tap.
 ```http
 POST /api/v1/messages/send/interactive
 Content-Type: application/json
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 
 {
@@ -62,7 +62,7 @@ List messages present a menu of options organized in sections.
 ```http
 POST /api/v1/messages/send/interactive
 Content-Type: application/json
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 
 {
@@ -97,7 +97,7 @@ Quick replies are horizontal buttons that disappear after selection.
 ```http
 POST /api/v1/messages/send/interactive
 Content-Type: application/json
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 
 {
@@ -119,7 +119,7 @@ Not all channels support all interactive message types. Check capabilities befor
 
 ```http
 GET /api/v1/channels/{channel_id}/capabilities
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 ```
 

@@ -137,17 +137,15 @@ def main
     # 1. Create a new contact
     puts "\n1. Creating a new contact..."
     contact = create_contact(
-      phone_number: '+1234567890',
+      phone: '+1234567890',
       email: 'john.doe@example.com',
-      first_name: 'John',
-      last_name: 'Doe',
-      company: 'Acme Inc'
+      name: 'John Doe'
     )
     contact_id = contact['id']
     puts "   Created contact: #{contact_id}"
-    puts "   Name: #{contact['first_name']} #{contact['last_name']}"
+    puts "   Name: #{contact['name']}"
     puts "   Email: #{contact['email']}"
-    puts "   Phone: #{contact['phone_number']}"
+    puts "   Phone: #{contact['phone']}"
 
     # 2. List contacts
     puts "\n2. Listing contacts..."
@@ -156,8 +154,7 @@ def main
     puts "   Total contacts: #{pagination['total']}"
     puts "   Page #{pagination['page']} of #{pagination['total_pages']}"
     contacts_response['items'].first(3).each do |c|
-      name = "#{c['first_name']} #{c['last_name']}".strip
-      name = 'Unnamed' if name.empty?
+      name = c['name'] || c['phone'] || c['email'] || 'Unknown'
       puts "   - #{c['id']}: #{name}"
     end
 
@@ -165,16 +162,13 @@ def main
     puts "\n3. Getting contact #{contact_id}..."
     fetched_contact = get_contact(contact_id)
     puts "   ID: #{fetched_contact['id']}"
-    puts "   Name: #{fetched_contact['first_name']} #{fetched_contact['last_name']}"
-    puts "   Company: #{fetched_contact['company']}"
+    puts "   Name: #{fetched_contact['name']}"
 
     # 4. Update contact
     puts "\n4. Updating contact #{contact_id}..."
     updated_contact = update_contact(contact_id,
-                                     first_name: 'Jane',
-                                     company: 'New Company Inc')
-    puts "   Updated name: #{updated_contact['first_name']} #{updated_contact['last_name']}"
-    puts "   Updated company: #{updated_contact['company']}"
+                                     name: 'Jane Doe')
+    puts "   Updated name: #{updated_contact['name']}"
 
     # 5. Delete contact
     puts "\n5. Deleting contact #{contact_id}..."

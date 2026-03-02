@@ -16,14 +16,9 @@ const API_URL = process.env.SENDSEVEN_API_URL || 'https://api.sendseven.com/api/
 // Type definitions
 interface Contact {
   id: string;
-  first_name?: string;
-  last_name?: string;
+  name?: string;
   phone?: string;
   email?: string;
-  whatsapp_id?: string;
-  telegram_id?: string;
-  messenger_id?: string;
-  instagram_id?: string;
 }
 
 interface Conversation {
@@ -74,7 +69,7 @@ interface UpdateConversationOptions {
  */
 function getHeaders(): Record<string, string> {
   return {
-    'X-API-Key': API_TOKEN!,  // API token authentication
+    'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
     'X-Tenant-ID': TENANT_ID!,
     'Content-Type': 'application/json',
   };
@@ -220,11 +215,7 @@ async function main(): Promise<void> {
       console.log(`  Needs reply: ${conversation.needs_reply}`);
       console.log(`  Assigned to: ${conversation.assigned_user_id || 'Unassigned'}`);
       if (conversation.contact) {
-        // Build display name from first/last name or use identifier fallbacks
-        let name = `${conversation.contact.first_name || ''} ${conversation.contact.last_name || ''}`.trim();
-        if (!name) {
-          name = conversation.contact.phone || conversation.contact.email || 'Unnamed Contact';
-        }
+        const name = conversation.contact.name || conversation.contact.phone || conversation.contact.email || 'Unnamed Contact';
         console.log(`  Contact: ${name}`);
       }
       console.log();

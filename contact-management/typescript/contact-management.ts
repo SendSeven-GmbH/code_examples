@@ -17,29 +17,23 @@ const API_URL = process.env.SENDSEVEN_API_URL || 'https://api.sendseven.com/api/
 interface Contact {
   id: string;
   tenant_id: string;
-  phone_number?: string;
+  phone?: string;
   email?: string;
-  first_name?: string;
-  last_name?: string;
-  company?: string;
+  name?: string;
   created_at: string;
   updated_at: string;
 }
 
 interface ContactCreateRequest {
-  phone_number?: string;
+  phone?: string;
   email?: string;
-  first_name?: string;
-  last_name?: string;
-  company?: string;
+  name?: string;
 }
 
 interface ContactUpdateRequest {
-  phone_number?: string;
+  phone?: string;
   email?: string;
-  first_name?: string;
-  last_name?: string;
-  company?: string;
+  name?: string;
 }
 
 interface PaginationInfo {
@@ -64,7 +58,7 @@ interface DeleteResponse {
  */
 function getHeaders(): HeadersInit {
   return {
-    'X-API-Key': API_TOKEN!,  // API token authentication
+    'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
     'X-Tenant-ID': TENANT_ID!,
     'Content-Type': 'application/json',
   };
@@ -177,17 +171,15 @@ async function main(): Promise<void> {
     // 1. Create a new contact
     console.log('\n1. Creating a new contact...');
     const contact = await createContact({
-      phone_number: '+1234567890',
+      phone: '+1234567890',
       email: 'john.doe@example.com',
-      first_name: 'John',
-      last_name: 'Doe',
-      company: 'Acme Inc',
+      name: 'John Doe',
     });
     const contactId = contact.id;
     console.log(`   Created contact: ${contactId}`);
-    console.log(`   Name: ${contact.first_name} ${contact.last_name}`);
+    console.log(`   Name: ${contact.name}`);
     console.log(`   Email: ${contact.email}`);
-    console.log(`   Phone: ${contact.phone_number}`);
+    console.log(`   Phone: ${contact.phone}`);
 
     // 2. List contacts
     console.log('\n2. Listing contacts...');
@@ -195,12 +187,8 @@ async function main(): Promise<void> {
     console.log(`   Total contacts: ${contactsResponse.pagination.total}`);
     console.log(`   Page ${contactsResponse.pagination.page} of ${contactsResponse.pagination.total_pages}`);
     contactsResponse.items.slice(0, 3).forEach(c => {
-      // Build display name from first/last name or use identifiers as fallback
-      let name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
-      if (!name) {
-        // Fallback to phone/email/ID for contacts without names
-        name = c.phone || c.email || `Contact ${c.id.substring(0, 8)}...`;
-      }
+      // Use name or fall back to identifiers
+      const name = c.name || c.phone || c.email || `Contact ${c.id.substring(0, 8)}...`;
       console.log(`   - ${c.id}: ${name}`);
     });
 
@@ -208,17 +196,14 @@ async function main(): Promise<void> {
     console.log(`\n3. Getting contact ${contactId}...`);
     const fetchedContact = await getContact(contactId);
     console.log(`   ID: ${fetchedContact.id}`);
-    console.log(`   Name: ${fetchedContact.first_name} ${fetchedContact.last_name}`);
-    console.log(`   Company: ${fetchedContact.company}`);
+    console.log(`   Name: ${fetchedContact.name}`);
 
     // 4. Update contact
     console.log(`\n4. Updating contact ${contactId}...`);
     const updatedContact = await updateContact(contactId, {
-      first_name: 'Jane',
-      company: 'New Company Inc',
+      name: 'Jane Doe',
     });
-    console.log(`   Updated name: ${updatedContact.first_name} ${updatedContact.last_name}`);
-    console.log(`   Updated company: ${updatedContact.company}`);
+    console.log(`   Updated name: ${updatedContact.name}`);
 
     // 5. Delete contact
     console.log(`\n5. Deleting contact ${contactId}...`);

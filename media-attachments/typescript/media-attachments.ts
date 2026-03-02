@@ -149,7 +149,7 @@ async function uploadAttachment(filePath: string): Promise<Attachment> {
   const response = await fetch(`${API_URL}/attachments`, {
     method: 'POST',
     headers: {
-      'X-API-Key': API_TOKEN!,  // API token authentication
+      'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
       'X-Tenant-ID': TENANT_ID!,
       'Content-Type': `multipart/form-data; boundary=${boundary}`,
     },
@@ -192,7 +192,7 @@ async function sendMediaMessage(
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
-      'X-API-Key': API_TOKEN!,  // API token authentication
+      'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
       'X-Tenant-ID': TENANT_ID!,
       'Content-Type': 'application/json',
     },
@@ -214,7 +214,7 @@ async function downloadAttachment(attachmentId: string, outputPath: string): Pro
   const response = await fetch(`${API_URL}/attachments/${attachmentId}/download`, {
     method: 'GET',
     headers: {
-      'X-API-Key': API_TOKEN!,  // API token authentication
+      'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
       'X-Tenant-ID': TENANT_ID!,
     },
   });

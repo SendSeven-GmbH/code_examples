@@ -52,7 +52,7 @@ def send_reply(conversation_id: str, text: str, to: str = "") -> dict:
     url = f"{API_URL}/messages"
 
     headers = {
-        "X-API-Key": API_TOKEN,  # API token authentication
+        "Authorization": f"Bearer {API_TOKEN}",  # Bearer token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }
@@ -113,10 +113,7 @@ def handle_webhook():
     message_text = message.get("text", "")
     # Get sender ID for reply (from external ID in inbound message)
     sender_id = message.get("from") or message.get("from_id", "")
-    # Build contact name from first/last or use fallback
-    contact_name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
-    if not contact_name:
-        contact_name = contact.get("phone") or contact.get("email") or "there"
+    contact_name = contact.get("name") or contact.get("phone") or contact.get("email") or "there"
 
     print(f"Received message from {contact_name}: {message_text[:50] if message_text else '[media]'}")
 

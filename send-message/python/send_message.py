@@ -37,7 +37,7 @@ def send_message(conversation_id: str, text: str, to: str = None) -> dict:
     url = f"{API_URL}/messages"
 
     headers = {
-        "X-API-Key": API_TOKEN,  # API token authentication
+        "Authorization": f"Bearer {API_TOKEN}",  # Bearer token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }

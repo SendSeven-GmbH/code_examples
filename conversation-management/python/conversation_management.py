@@ -24,7 +24,7 @@ API_URL = os.getenv("SENDSEVEN_API_URL", "https://api.sendseven.com/api/v1")
 def get_headers() -> dict:
     """Get common headers for API requests."""
     return {
-        "X-API-Key": API_TOKEN,  # API token authentication
+        "Authorization": f"Bearer {API_TOKEN}",  # Bearer token authentication
         "X-Tenant-ID": TENANT_ID,
         "Content-Type": "application/json",
     }
@@ -193,10 +193,7 @@ def main():
             print(f"  Assigned to: {conversation.get('assigned_user_id', 'Unassigned')}")
             if "contact" in conversation and conversation["contact"]:
                 contact = conversation["contact"]
-                # Build display name from first/last name or use identifier fallbacks
-                name = f"{contact.get('first_name', '')} {contact.get('last_name', '')}".strip()
-                if not name:
-                    name = contact.get('phone') or contact.get('email') or "Unnamed Contact"
+                name = contact.get('name') or contact.get('phone') or contact.get('email') or "Unnamed Contact"
                 print(f"  Contact: {name}")
             print()
 

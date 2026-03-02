@@ -21,7 +21,7 @@ This example demonstrates:
 Create a `.env` file or set these environment variables:
 
 ```bash
-SENDSEVEN_API_TOKEN=msgapi_your_token_here
+SENDSEVEN_API_TOKEN=s7_api_your_token_here
 SENDSEVEN_TENANT_ID=your-tenant-id
 SENDSEVEN_API_URL=https://api.sendseven.com/api/v1
 ```
@@ -33,15 +33,13 @@ SENDSEVEN_API_URL=https://api.sendseven.com/api/v1
 ```http
 POST /api/v1/contacts
 Content-Type: application/json
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 
 {
-  "phone_number": "+1234567890",
+  "phone": "+1234567890",
   "email": "john@example.com",
-  "first_name": "John",
-  "last_name": "Doe",
-  "company": "Acme Inc"
+  "name": "John Doe"
 }
 ```
 
@@ -51,11 +49,9 @@ X-Tenant-ID: tenant-id
 {
   "id": "contact_abc123",
   "tenant_id": "tenant-id",
-  "phone_number": "+1234567890",
+  "phone": "+1234567890",
   "email": "john@example.com",
-  "first_name": "John",
-  "last_name": "Doe",
-  "company": "Acme Inc",
+  "name": "John Doe",
   "created_at": "2026-01-13T10:30:00Z",
   "updated_at": "2026-01-13T10:30:00Z"
 }
@@ -65,7 +61,7 @@ X-Tenant-ID: tenant-id
 
 ```http
 GET /api/v1/contacts?page=1&page_size=20
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 ```
 
@@ -76,11 +72,9 @@ X-Tenant-ID: tenant-id
   "items": [
     {
       "id": "contact_abc123",
-      "phone_number": "+1234567890",
+      "phone": "+1234567890",
       "email": "john@example.com",
-      "first_name": "John",
-      "last_name": "Doe",
-      "company": "Acme Inc",
+      "name": "John Doe",
       "created_at": "2026-01-13T10:30:00Z"
     }
   ],
@@ -97,7 +91,7 @@ X-Tenant-ID: tenant-id
 
 ```http
 GET /api/v1/contacts/{contact_id}
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 ```
 
@@ -107,11 +101,9 @@ X-Tenant-ID: tenant-id
 {
   "id": "contact_abc123",
   "tenant_id": "tenant-id",
-  "phone_number": "+1234567890",
+  "phone": "+1234567890",
   "email": "john@example.com",
-  "first_name": "John",
-  "last_name": "Doe",
-  "company": "Acme Inc",
+  "name": "John Doe",
   "created_at": "2026-01-13T10:30:00Z",
   "updated_at": "2026-01-13T10:30:00Z"
 }
@@ -122,12 +114,11 @@ X-Tenant-ID: tenant-id
 ```http
 PUT /api/v1/contacts/{contact_id}
 Content-Type: application/json
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 
 {
-  "first_name": "Jane",
-  "company": "New Company Inc"
+  "name": "Jane Doe"
 }
 ```
 
@@ -137,11 +128,9 @@ X-Tenant-ID: tenant-id
 {
   "id": "contact_abc123",
   "tenant_id": "tenant-id",
-  "phone_number": "+1234567890",
+  "phone": "+1234567890",
   "email": "john@example.com",
-  "first_name": "Jane",
-  "last_name": "Doe",
-  "company": "New Company Inc",
+  "name": "Jane Doe",
   "created_at": "2026-01-13T10:30:00Z",
   "updated_at": "2026-01-13T10:35:00Z"
 }
@@ -151,7 +140,7 @@ X-Tenant-ID: tenant-id
 
 ```http
 DELETE /api/v1/contacts/{contact_id}
-Authorization: Bearer msgapi_...
+Authorization: Bearer s7_api_...
 X-Tenant-ID: tenant-id
 ```
 
@@ -239,13 +228,11 @@ ruby contact_management.rb
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `phone_number` | string | No* | E.164 format (+1234567890) |
+| `phone` | string | No* | E.164 format (+1234567890) |
 | `email` | string | No* | Valid email address |
-| `first_name` | string | No | Contact's first name |
-| `last_name` | string | No | Contact's last name |
-| `company` | string | No | Company name |
+| `name` | string | No | Contact's display name |
 
-*At least one identifier (phone_number or email) is recommended.
+*At least one identifier (phone or email) is recommended.
 
 ## Next Steps
 

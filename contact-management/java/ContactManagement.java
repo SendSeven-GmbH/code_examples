@@ -97,13 +97,11 @@ public class ContactManagement {
     /**
      * Create a new contact.
      */
-    public JsonNode createContact(String phoneNumber, String email, String firstName, String lastName, String company) throws Exception {
+    public JsonNode createContact(String phone, String email, String name) throws Exception {
         ObjectNode payload = objectMapper.createObjectNode();
-        if (phoneNumber != null) payload.put("phone_number", phoneNumber);
+        if (phone != null) payload.put("phone", phone);
         if (email != null) payload.put("email", email);
-        if (firstName != null) payload.put("first_name", firstName);
-        if (lastName != null) payload.put("last_name", lastName);
-        if (company != null) payload.put("company", company);
+        if (name != null) payload.put("name", name);
 
         return makeRequest("POST", "/contacts", payload);
     }
@@ -126,10 +124,9 @@ public class ContactManagement {
     /**
      * Update an existing contact.
      */
-    public JsonNode updateContact(String contactId, String firstName, String company) throws Exception {
+    public JsonNode updateContact(String contactId, String name) throws Exception {
         ObjectNode payload = objectMapper.createObjectNode();
-        if (firstName != null) payload.put("first_name", firstName);
-        if (company != null) payload.put("company", company);
+        if (name != null) payload.put("name", name);
 
         return makeRequest("PUT", "/contacts/" + contactId, payload);
     }
@@ -162,15 +159,13 @@ public class ContactManagement {
             JsonNode contact = createContact(
                 "+1234567890",
                 "john.doe@example.com",
-                "John",
-                "Doe",
-                "Acme Inc"
+                "John Doe"
             );
             String contactId = contact.get("id").asText();
             System.out.println("   Created contact: " + contactId);
-            System.out.println("   Name: " + contact.get("first_name").asText() + " " + contact.get("last_name").asText());
+            System.out.println("   Name: " + contact.get("name").asText());
             System.out.println("   Email: " + contact.get("email").asText());
-            System.out.println("   Phone: " + contact.get("phone_number").asText());
+            System.out.println("   Phone: " + contact.get("phone").asText());
 
             // 2. List contacts
             System.out.println("\n2. Listing contacts...");
@@ -181,10 +176,10 @@ public class ContactManagement {
             JsonNode items = contactsResponse.get("items");
             for (int i = 0; i < Math.min(3, items.size()); i++) {
                 JsonNode c = items.get(i);
-                String firstName = c.has("first_name") ? c.get("first_name").asText() : "";
-                String lastName = c.has("last_name") ? c.get("last_name").asText() : "";
-                String name = (firstName + " " + lastName).trim();
-                if (name.isEmpty()) name = "Unnamed";
+                String name = c.has("name") && !c.get("name").isNull() ? c.get("name").asText() : null;
+                if (name == null || name.isEmpty()) name = c.has("phone") ? c.get("phone").asText("") : "";
+                if (name.isEmpty()) name = c.has("email") ? c.get("email").asText("") : "";
+                if (name.isEmpty()) name = "Unknown";
                 System.out.println("   - " + c.get("id").asText() + ": " + name);
             }
 
@@ -192,14 +187,12 @@ public class ContactManagement {
             System.out.println("\n3. Getting contact " + contactId + "...");
             JsonNode fetchedContact = getContact(contactId);
             System.out.println("   ID: " + fetchedContact.get("id").asText());
-            System.out.println("   Name: " + fetchedContact.get("first_name").asText() + " " + fetchedContact.get("last_name").asText());
-            System.out.println("   Company: " + fetchedContact.get("company").asText());
+            System.out.println("   Name: " + fetchedContact.get("name").asText());
 
             // 4. Update contact
             System.out.println("\n4. Updating contact " + contactId + "...");
-            JsonNode updatedContact = updateContact(contactId, "Jane", "New Company Inc");
-            System.out.println("   Updated name: " + updatedContact.get("first_name").asText() + " " + updatedContact.get("last_name").asText());
-            System.out.println("   Updated company: " + updatedContact.get("company").asText());
+            JsonNode updatedContact = updateContact(contactId, "Jane Doe");
+            System.out.println("   Updated name: " + updatedContact.get("name").asText());
 
             // 5. Delete contact
             System.out.println("\n5. Deleting contact " + contactId + "...");

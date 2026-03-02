@@ -16,33 +16,27 @@ import (
 
 // Contact represents a contact object
 type Contact struct {
-	ID          string `json:"id"`
-	TenantID    string `json:"tenant_id,omitempty"`
-	PhoneNumber string `json:"phone_number,omitempty"`
-	Email       string `json:"email,omitempty"`
-	FirstName   string `json:"first_name,omitempty"`
-	LastName    string `json:"last_name,omitempty"`
-	Company     string `json:"company,omitempty"`
-	CreatedAt   string `json:"created_at,omitempty"`
-	UpdatedAt   string `json:"updated_at,omitempty"`
+	ID        string `json:"id"`
+	TenantID  string `json:"tenant_id,omitempty"`
+	Phone     string `json:"phone,omitempty"`
+	Email     string `json:"email,omitempty"`
+	Name      string `json:"name,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
+	UpdatedAt string `json:"updated_at,omitempty"`
 }
 
 // ContactCreateRequest represents the request payload for creating a contact
 type ContactCreateRequest struct {
-	PhoneNumber string `json:"phone_number,omitempty"`
-	Email       string `json:"email,omitempty"`
-	FirstName   string `json:"first_name,omitempty"`
-	LastName    string `json:"last_name,omitempty"`
-	Company     string `json:"company,omitempty"`
+	Phone string `json:"phone,omitempty"`
+	Email string `json:"email,omitempty"`
+	Name  string `json:"name,omitempty"`
 }
 
 // ContactUpdateRequest represents the request payload for updating a contact
 type ContactUpdateRequest struct {
-	PhoneNumber *string `json:"phone_number,omitempty"`
-	Email       *string `json:"email,omitempty"`
-	FirstName   *string `json:"first_name,omitempty"`
-	LastName    *string `json:"last_name,omitempty"`
-	Company     *string `json:"company,omitempty"`
+	Phone *string `json:"phone,omitempty"`
+	Email *string `json:"email,omitempty"`
+	Name  *string `json:"name,omitempty"`
 }
 
 // PaginationInfo represents pagination metadata
@@ -228,11 +222,9 @@ func main() {
 	// 1. Create a new contact
 	fmt.Println("\n1. Creating a new contact...")
 	contact, err := CreateContact(config, ContactCreateRequest{
-		PhoneNumber: "+1234567890",
-		Email:       "john.doe@example.com",
-		FirstName:   "John",
-		LastName:    "Doe",
-		Company:     "Acme Inc",
+		Phone: "+1234567890",
+		Email: "john.doe@example.com",
+		Name:  "John Doe",
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
@@ -240,9 +232,9 @@ func main() {
 	}
 	contactID := contact.ID
 	fmt.Printf("   Created contact: %s\n", contactID)
-	fmt.Printf("   Name: %s %s\n", contact.FirstName, contact.LastName)
+	fmt.Printf("   Name: %s\n", contact.Name)
 	fmt.Printf("   Email: %s\n", contact.Email)
-	fmt.Printf("   Phone: %s\n", contact.PhoneNumber)
+	fmt.Printf("   Phone: %s\n", contact.Phone)
 
 	// 2. List contacts
 	fmt.Println("\n2. Listing contacts...")
@@ -257,9 +249,15 @@ func main() {
 		if i >= 3 {
 			break
 		}
-		name := c.FirstName + " " + c.LastName
-		if name == " " {
-			name = "Unnamed"
+		name := c.Name
+		if name == "" {
+			name = c.Phone
+		}
+		if name == "" {
+			name = c.Email
+		}
+		if name == "" {
+			name = "Unknown"
 		}
 		fmt.Printf("   - %s: %s\n", c.ID, name)
 	}
@@ -272,23 +270,19 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("   ID: %s\n", fetchedContact.ID)
-	fmt.Printf("   Name: %s %s\n", fetchedContact.FirstName, fetchedContact.LastName)
-	fmt.Printf("   Company: %s\n", fetchedContact.Company)
+	fmt.Printf("   Name: %s\n", fetchedContact.Name)
 
 	// 4. Update contact
 	fmt.Printf("\n4. Updating contact %s...\n", contactID)
-	newFirstName := "Jane"
-	newCompany := "New Company Inc"
+	newName := "Jane Doe"
 	updatedContact, err := UpdateContact(config, contactID, ContactUpdateRequest{
-		FirstName: &newFirstName,
-		Company:   &newCompany,
+		Name: &newName,
 	})
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("   Updated name: %s %s\n", updatedContact.FirstName, updatedContact.LastName)
-	fmt.Printf("   Updated company: %s\n", updatedContact.Company)
+	fmt.Printf("   Updated name: %s\n", updatedContact.Name)
 
 	// 5. Delete contact
 	fmt.Printf("\n5. Deleting contact %s...\n", contactID)

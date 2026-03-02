@@ -42,8 +42,7 @@ interface WebhookPayload {
     };
     contact?: {
       id: string;
-      first_name?: string;
-      last_name?: string;
+      name?: string;
       phone?: string;
       email?: string;
     };
@@ -106,7 +105,7 @@ async function sendReply(conversationId: string, text: string, to: string = ''):
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
-      'X-API-Key': API_TOKEN,  // API token authentication
+      'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
       'X-Tenant-ID': TENANT_ID,
       'Content-Type': 'application/json',
     },
@@ -190,11 +189,7 @@ app.post('/webhooks/sendseven', async (req: WebhookRequest, res: Response) => {
   const messageText = message.text || '';
   // Get sender ID for reply (from external ID in inbound message)
   const senderId = message.from || message.from_id || '';
-  // Build contact name from first/last or use fallback
-  let contactName = `${contact?.first_name || ''} ${contact?.last_name || ''}`.trim();
-  if (!contactName) {
-    contactName = contact?.phone || contact?.email || 'there';
-  }
+  const contactName = contact?.name || contact?.phone || contact?.email || 'there';
 
   console.log(`Received message from ${contactName}: ${messageText.slice(0, 50) || '[media]'}`);
 

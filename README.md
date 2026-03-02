@@ -16,7 +16,7 @@ Sign up at [app.sendseven.com](https://app.sendseven.com) and create an API toke
 ### 2. Set Environment Variables
 
 ```bash
-export SENDSEVEN_API_TOKEN="msgapi_your_token_here"
+export SENDSEVEN_API_TOKEN="s7_api_your_token_here"
 export SENDSEVEN_TENANT_ID="your-tenant-id"
 export SENDSEVEN_API_URL="https://api.sendseven.com/api/v1"
 ```
@@ -67,16 +67,20 @@ Each example is available in:
 All API requests require these headers:
 
 ```http
-Authorization: Bearer msgapi_your_token_here
+Authorization: Bearer s7_api_your_token_here
 X-Tenant-ID: your-tenant-id
 Content-Type: application/json
 ```
 
 ### API Token Format
 
-Tokens follow the format: `msgapi_<64_hex_characters>`
+Tokens use the prefix `s7_api_` followed by a unique identifier:
 
-Example: `msgapi_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2`
+```
+s7_api_a1b2c3d4e5f6...
+```
+
+Legacy tokens with the `msgapi_` prefix are also supported.
 
 ## Webhook Security
 

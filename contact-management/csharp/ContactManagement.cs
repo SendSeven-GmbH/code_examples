@@ -44,17 +44,15 @@ class Program
             Console.WriteLine("\n1. Creating a new contact...");
             var contact = await CreateContactAsync(new
             {
-                phone_number = "+1234567890",
+                phone = "+1234567890",
                 email = "john.doe@example.com",
-                first_name = "John",
-                last_name = "Doe",
-                company = "Acme Inc"
+                name = "John Doe"
             });
             var contactId = contact.GetProperty("id").GetString();
             Console.WriteLine($"   Created contact: {contactId}");
-            Console.WriteLine($"   Name: {contact.GetProperty("first_name").GetString()} {contact.GetProperty("last_name").GetString()}");
+            Console.WriteLine($"   Name: {contact.GetProperty("name").GetString()}");
             Console.WriteLine($"   Email: {contact.GetProperty("email").GetString()}");
-            Console.WriteLine($"   Phone: {contact.GetProperty("phone_number").GetString()}");
+            Console.WriteLine($"   Phone: {contact.GetProperty("phone").GetString()}");
 
             // 2. List contacts
             Console.WriteLine("\n2. Listing contacts...");
@@ -66,10 +64,13 @@ class Program
             for (int i = 0; i < Math.Min(3, items.GetArrayLength()); i++)
             {
                 var c = items[i];
-                var firstName = c.TryGetProperty("first_name", out var fn) ? fn.GetString() ?? "" : "";
-                var lastName = c.TryGetProperty("last_name", out var ln) ? ln.GetString() ?? "" : "";
-                var name = $"{firstName} {lastName}".Trim();
-                if (string.IsNullOrEmpty(name)) name = "Unnamed";
+                var name = c.TryGetProperty("name", out var n) && n.ValueKind != JsonValueKind.Null ? n.GetString() : null;
+                if (string.IsNullOrEmpty(name))
+                    name = c.TryGetProperty("phone", out var p) ? p.GetString() : null;
+                if (string.IsNullOrEmpty(name))
+                    name = c.TryGetProperty("email", out var e) ? e.GetString() : null;
+                if (string.IsNullOrEmpty(name))
+                    name = "Unknown";
                 Console.WriteLine($"   - {c.GetProperty("id").GetString()}: {name}");
             }
 
@@ -77,18 +78,15 @@ class Program
             Console.WriteLine($"\n3. Getting contact {contactId}...");
             var fetchedContact = await GetContactAsync(contactId!);
             Console.WriteLine($"   ID: {fetchedContact.GetProperty("id").GetString()}");
-            Console.WriteLine($"   Name: {fetchedContact.GetProperty("first_name").GetString()} {fetchedContact.GetProperty("last_name").GetString()}");
-            Console.WriteLine($"   Company: {fetchedContact.GetProperty("company").GetString()}");
+            Console.WriteLine($"   Name: {fetchedContact.GetProperty("name").GetString()}");
 
             // 4. Update contact
             Console.WriteLine($"\n4. Updating contact {contactId}...");
             var updatedContact = await UpdateContactAsync(contactId!, new
             {
-                first_name = "Jane",
-                company = "New Company Inc"
+                name = "Jane Doe"
             });
-            Console.WriteLine($"   Updated name: {updatedContact.GetProperty("first_name").GetString()} {updatedContact.GetProperty("last_name").GetString()}");
-            Console.WriteLine($"   Updated company: {updatedContact.GetProperty("company").GetString()}");
+            Console.WriteLine($"   Updated name: {updatedContact.GetProperty("name").GetString()}");
 
             // 5. Delete contact
             Console.WriteLine($"\n5. Deleting contact {contactId}...");

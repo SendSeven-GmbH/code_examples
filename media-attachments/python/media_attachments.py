@@ -49,7 +49,7 @@ SUPPORTED_TYPES = {
 def get_headers() -> dict:
     """Get the standard API headers."""
     return {
-        "X-API-Key": API_TOKEN,  # API token authentication
+        "Authorization": f"Bearer {API_TOKEN}",  # Bearer token authentication
         "X-Tenant-ID": TENANT_ID,
     }
 
