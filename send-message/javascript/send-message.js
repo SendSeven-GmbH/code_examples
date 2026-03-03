@@ -15,12 +15,14 @@ const CONVERSATION_ID = process.env.CONVERSATION_ID;
 /**
  * Send a text message to a conversation.
  *
+ * The recipient is auto-resolved from the conversation's contact method.
+ * No need to specify 'to' when replying to an existing conversation.
+ *
  * @param {string} conversationId - The UUID of the conversation
  * @param {string} text - The message text to send
- * @param {string} [to] - Optional recipient external ID (phone, telegram_id, etc.)
  * @returns {Promise<Object>} The created message object
  */
-async function sendMessage(conversationId, text, to = '') {
+async function sendMessage(conversationId, text) {
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
@@ -30,7 +32,40 @@ async function sendMessage(conversationId, text, to = '') {
     },
     body: JSON.stringify({
       conversation_id: conversationId,
-      to: to,  // Required field - recipient external ID
+      text: text,
+      message_type: 'text',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`API Error ${response.status}: ${errorBody}`);
+  }
+
+  return response.json();
+}
+
+/**
+ * Send a message using a contact method ID.
+ *
+ * The contact_method_id resolves the recipient, channel, and contact
+ * automatically. This is the cleanest way to initiate a new message
+ * without needing a conversation_id.
+ *
+ * @param {string} contactMethodId - The UUID of the contact method
+ * @param {string} text - The message text to send
+ * @returns {Promise<Object>} The created message object
+ */
+async function sendMessageViaContactMethod(contactMethodId, text) {
+  const response = await fetch(`${API_URL}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
+      'X-Tenant-ID': TENANT_ID,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contact_method_id: contactMethodId,
       text: text,
       message_type: 'text',
     }),

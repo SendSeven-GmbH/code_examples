@@ -62,6 +62,8 @@ class Program
 
     /// <summary>
     /// Send a text message to a conversation.
+    /// The recipient is auto-resolved from the conversation's contact method.
+    /// No need to specify 'to' when replying to an existing conversation.
     /// </summary>
     private static async Task<JsonElement> SendMessageAsync(string conversationId, string text)
     {
@@ -72,6 +74,32 @@ class Program
             message_type = "text"
         };
 
+        return await SendPayloadAsync(payload);
+    }
+
+    /// <summary>
+    /// Send a message using a contact method ID.
+    /// The contact_method_id resolves the recipient, channel, and contact
+    /// automatically. This is the cleanest way to initiate a new message
+    /// without needing a conversation_id.
+    /// </summary>
+    private static async Task<JsonElement> SendMessageViaContactMethodAsync(string contactMethodId, string text)
+    {
+        var payload = new
+        {
+            contact_method_id = contactMethodId,
+            text = text,
+            message_type = "text"
+        };
+
+        return await SendPayloadAsync(payload);
+    }
+
+    /// <summary>
+    /// Send a payload to the messages API endpoint.
+    /// </summary>
+    private static async Task<JsonElement> SendPayloadAsync(object payload)
+    {
         var json = JsonSerializer.Serialize(payload);
         var content = new StringContent(json, Encoding.UTF8, "application/json");
 

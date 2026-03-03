@@ -82,6 +82,18 @@ s7_api_a1b2c3d4e5f6...
 
 Legacy tokens with the `msgapi_` prefix are also supported.
 
+## Sending Messages
+
+The Messages API (`POST /api/v1/messages`) supports three ways to resolve the recipient:
+
+| Mode | Field | Use Case |
+|------|-------|----------|
+| **Conversation reply** | `conversation_id` | Reply to an existing conversation (recipient auto-resolved) |
+| **Contact method** | `contact_method_id` | Send via a specific contact method (resolves recipient, channel, and contact) |
+| **Explicit recipient** | `conversation_id` + `to` | Legacy mode with explicit recipient ID |
+
+See [Send Message](./send-message) for full examples in all languages.
+
 ## Webhook Security
 
 Webhooks are signed with HMAC-SHA256. Always verify signatures:

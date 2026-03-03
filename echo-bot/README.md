@@ -56,7 +56,7 @@ PORT=3000
     │     → Extract conversation_id                            │
     │                                                          │
     │  3. POST /api/v1/messages                                │
-    │     → Send reply to same conversation                    │
+    │     → Reply using conversation_id (recipient auto-resolved) │
     └──────────────────────────────────────────────────────────┘
 ```
 

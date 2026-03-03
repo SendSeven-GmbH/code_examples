@@ -100,8 +100,9 @@ function verifySignature(payload: object, signature: string, timestamp: string):
 
 /**
  * Send a reply message to a conversation.
+ * The recipient is auto-resolved from the conversation's contact method.
  */
-async function sendReply(conversationId: string, text: string, to: string = ''): Promise<Message> {
+async function sendReply(conversationId: string, text: string): Promise<Message> {
   const response = await fetch(`${API_URL}/messages`, {
     method: 'POST',
     headers: {
@@ -111,7 +112,6 @@ async function sendReply(conversationId: string, text: string, to: string = ''):
     },
     body: JSON.stringify({
       conversation_id: conversationId,
-      to: to,  // Recipient external ID
       text: text,
       message_type: 'text',
     }),
@@ -187,8 +187,6 @@ app.post('/webhooks/sendseven', async (req: WebhookRequest, res: Response) => {
   const conversationId = message.conversation_id;
   const messageType = message.message_type || 'text';
   const messageText = message.text || '';
-  // Get sender ID for reply (from external ID in inbound message)
-  const senderId = message.from || message.from_id || '';
   const contactName = contact?.name || contact?.phone || contact?.email || 'there';
 
   console.log(`Received message from ${contactName}: ${messageText.slice(0, 50) || '[media]'}`);
@@ -197,7 +195,7 @@ app.post('/webhooks/sendseven', async (req: WebhookRequest, res: Response) => {
   const replyText = generateReply(messageType, messageText);
 
   try {
-    const result = await sendReply(conversationId, replyText, senderId);
+    const result = await sendReply(conversationId, replyText);
     console.log(`Reply sent: ${result.id}`);
     processedDeliveries.add(deliveryId);
   } catch (error) {

@@ -21,6 +21,7 @@ interface Message {
   platform?: string;  // Channel type: whatsapp, telegram, etc.
   channel_id?: string;
   contact_id?: string;
+  contact_method_id?: string;  // The contact method used for this message
   direction: 'inbound' | 'outbound';
   message_type: string;
   text: string | null;
@@ -34,19 +35,54 @@ interface Message {
 }
 
 interface SendMessageRequest {
-  conversation_id: string;
-  to: string;  // Required - recipient external ID
+  conversation_id?: string;       // Provide to reply to an existing conversation
+  contact_method_id?: string;     // Provide to send via a specific contact method
+  to?: string;                    // Optional - auto-resolved from conversation or contact method
   text: string;
   message_type: 'text';
 }
 
 /**
  * Send a text message to a conversation.
+ *
+ * The recipient is auto-resolved from the conversation's contact method.
+ * No need to specify 'to' when replying to an existing conversation.
  */
-async function sendMessage(conversationId: string, text: string, to: string = ''): Promise<Message> {
+async function sendMessage(conversationId: string, text: string): Promise<Message> {
   const payload: SendMessageRequest = {
     conversation_id: conversationId,
-    to: to,  // Required - recipient external ID
+    text: text,
+    message_type: 'text',
+  };
+
+  const response = await fetch(`${API_URL}/messages`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${API_TOKEN}`,  // Bearer token authentication
+      'X-Tenant-ID': TENANT_ID!,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`API Error ${response.status}: ${errorBody}`);
+  }
+
+  return response.json() as Promise<Message>;
+}
+
+/**
+ * Send a message using a contact method ID.
+ *
+ * The contact_method_id resolves the recipient, channel, and contact
+ * automatically. This is the cleanest way to initiate a new message
+ * without needing a conversation_id.
+ */
+async function sendMessageViaContactMethod(contactMethodId: string, text: string): Promise<Message> {
+  const payload: SendMessageRequest = {
+    contact_method_id: contactMethodId,
     text: text,
     message_type: 'text',
   };

@@ -33,21 +33,54 @@ $CONVERSATION_ID = getenv('CONVERSATION_ID');
 /**
  * Send a text message to a conversation.
  *
+ * The recipient is auto-resolved from the conversation's contact method.
+ * No need to specify 'to' when replying to an existing conversation.
+ *
  * @param string $conversationId The UUID of the conversation
  * @param string $text The message text to send
  * @return array The created message object
  * @throws Exception If the API request fails
  */
 function sendMessage(string $conversationId, string $text): array {
-    global $API_TOKEN, $TENANT_ID, $API_URL;
-
-    $url = $API_URL . '/messages';
-
-    $payload = json_encode([
+    return sendPayload([
         'conversation_id' => $conversationId,
         'text' => $text,
         'message_type' => 'text',
     ]);
+}
+
+/**
+ * Send a message using a contact method ID.
+ *
+ * The contact_method_id resolves the recipient, channel, and contact
+ * automatically. This is the cleanest way to initiate a new message
+ * without needing a conversation_id.
+ *
+ * @param string $contactMethodId The UUID of the contact method
+ * @param string $text The message text to send
+ * @return array The created message object
+ * @throws Exception If the API request fails
+ */
+function sendMessageViaContactMethod(string $contactMethodId, string $text): array {
+    return sendPayload([
+        'contact_method_id' => $contactMethodId,
+        'text' => $text,
+        'message_type' => 'text',
+    ]);
+}
+
+/**
+ * Send a payload to the messages API endpoint.
+ *
+ * @param array $data The message payload
+ * @return array The created message object
+ * @throws Exception If the API request fails
+ */
+function sendPayload(array $data): array {
+    global $API_TOKEN, $TENANT_ID, $API_URL;
+
+    $url = $API_URL . '/messages';
+    $payload = json_encode($data);
 
     $ch = curl_init($url);
     curl_setopt_array($ch, [

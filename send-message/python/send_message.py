@@ -19,14 +19,16 @@ API_URL = os.getenv("SENDSEVEN_API_URL", "https://api.sendseven.com/api/v1")
 CONVERSATION_ID = os.getenv("CONVERSATION_ID")
 
 
-def send_message(conversation_id: str, text: str, to: str = None) -> dict:
+def send_message(conversation_id: str, text: str) -> dict:
     """
     Send a text message to a conversation.
+
+    The recipient is auto-resolved from the conversation's contact method.
+    No need to specify 'to' when replying to an existing conversation.
 
     Args:
         conversation_id: The UUID of the conversation
         text: The message text to send
-        to: Optional recipient external ID (phone, telegram_id, etc.)
 
     Returns:
         dict: The created message object
@@ -44,7 +46,44 @@ def send_message(conversation_id: str, text: str, to: str = None) -> dict:
 
     payload = {
         "conversation_id": conversation_id,
-        "to": to or "",  # Required field - recipient external ID
+        "text": text,
+        "message_type": "text",
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+
+    return response.json()
+
+
+def send_message_via_contact_method(contact_method_id: str, text: str) -> dict:
+    """
+    Send a message using a contact method ID.
+
+    The contact_method_id resolves the recipient, channel, and contact
+    automatically. This is the cleanest way to initiate a new message
+    without needing a conversation_id.
+
+    Args:
+        contact_method_id: The UUID of the contact method
+        text: The message text to send
+
+    Returns:
+        dict: The created message object
+
+    Raises:
+        requests.HTTPError: If the API request fails
+    """
+    url = f"{API_URL}/messages"
+
+    headers = {
+        "Authorization": f"Bearer {API_TOKEN}",  # Bearer token authentication
+        "X-Tenant-ID": TENANT_ID,
+        "Content-Type": "application/json",
+    }
+
+    payload = {
+        "contact_method_id": contact_method_id,
         "text": text,
         "message_type": "text",
     }

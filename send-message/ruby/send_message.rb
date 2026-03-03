@@ -35,11 +35,47 @@ CONVERSATION_ID = ENV['CONVERSATION_ID']
 ##
 # Send a text message to a conversation.
 #
+# The recipient is auto-resolved from the conversation's contact method.
+# No need to specify 'to' when replying to an existing conversation.
+#
 # @param conversation_id [String] The UUID of the conversation
 # @param text [String] The message text to send
 # @return [Hash] The created message object
 # @raise [RuntimeError] If the API request fails
 def send_message(conversation_id, text)
+  send_payload(
+    conversation_id: conversation_id,
+    text: text,
+    message_type: 'text'
+  )
+end
+
+##
+# Send a message using a contact method ID.
+#
+# The contact_method_id resolves the recipient, channel, and contact
+# automatically. This is the cleanest way to initiate a new message
+# without needing a conversation_id.
+#
+# @param contact_method_id [String] The UUID of the contact method
+# @param text [String] The message text to send
+# @return [Hash] The created message object
+# @raise [RuntimeError] If the API request fails
+def send_message_via_contact_method(contact_method_id, text)
+  send_payload(
+    contact_method_id: contact_method_id,
+    text: text,
+    message_type: 'text'
+  )
+end
+
+##
+# Send a payload to the messages API endpoint.
+#
+# @param data [Hash] The message payload
+# @return [Hash] The created message object
+# @raise [RuntimeError] If the API request fails
+def send_payload(data)
   uri = URI("#{API_URL}/messages")
 
   http = Net::HTTP.new(uri.host, uri.port)
@@ -50,11 +86,7 @@ def send_message(conversation_id, text)
   request['X-Tenant-ID'] = TENANT_ID
   request['Content-Type'] = 'application/json'
 
-  request.body = {
-    conversation_id: conversation_id,
-    text: text,
-    message_type: 'text'
-  }.to_json
+  request.body = data.to_json
 
   response = http.request(request)
 

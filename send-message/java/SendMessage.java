@@ -66,6 +66,9 @@ public class SendMessage {
     /**
      * Send a text message to a conversation.
      *
+     * The recipient is auto-resolved from the conversation's contact method.
+     * No need to specify 'to' when replying to an existing conversation.
+     *
      * @param conversationId The UUID of the conversation
      * @param text The message text to send
      * @return The created message as a JsonNode
@@ -77,6 +80,31 @@ public class SendMessage {
         payload.put("text", text);
         payload.put("message_type", "text");
 
+        return sendPayload(payload);
+    }
+
+    /**
+     * Send a message using a contact method ID.
+     *
+     * The contact_method_id resolves the recipient, channel, and contact
+     * automatically. This is the cleanest way to initiate a new message
+     * without needing a conversation_id.
+     *
+     * @param contactMethodId The UUID of the contact method
+     * @param text The message text to send
+     * @return The created message as a JsonNode
+     * @throws Exception If the API request fails
+     */
+    public JsonNode sendMessageViaContactMethod(String contactMethodId, String text) throws Exception {
+        ObjectNode payload = objectMapper.createObjectNode();
+        payload.put("contact_method_id", contactMethodId);
+        payload.put("text", text);
+        payload.put("message_type", "text");
+
+        return sendPayload(payload);
+    }
+
+    private JsonNode sendPayload(ObjectNode payload) throws Exception {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(apiUrl + "/messages"))
                 .header("Authorization", "Bearer " + apiToken)

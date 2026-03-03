@@ -25,7 +25,8 @@ type Message struct {
 	CreatedAt      string `json:"created_at"`
 }
 
-// SendMessageRequest represents the request payload
+// SendMessageRequest represents the request payload for conversation-based sending.
+// The recipient is auto-resolved from the conversation's contact method.
 type SendMessageRequest struct {
 	ConversationID string `json:"conversation_id"`
 	Text           string `json:"text"`
@@ -58,7 +59,16 @@ func loadConfig() (*Config, error) {
 	return config, nil
 }
 
-// SendMessage sends a text message to a conversation
+// SendMessageViaContactMethodRequest represents the request payload for contact method mode
+type SendMessageViaContactMethodRequest struct {
+	ContactMethodID string `json:"contact_method_id"`
+	Text            string `json:"text"`
+	MessageType     string `json:"message_type"`
+}
+
+// SendMessage sends a text message to a conversation.
+// The recipient is auto-resolved from the conversation's contact method.
+// No need to specify 'to' when replying to an existing conversation.
 func SendMessage(config *Config, conversationID, text string) (*Message, error) {
 	payload := SendMessageRequest{
 		ConversationID: conversationID,
@@ -66,6 +76,25 @@ func SendMessage(config *Config, conversationID, text string) (*Message, error) 
 		MessageType:    "text",
 	}
 
+	return sendMessagePayload(config, payload)
+}
+
+// SendMessageViaContactMethod sends a message using a contact method ID.
+// The contact_method_id resolves the recipient, channel, and contact
+// automatically. This is the cleanest way to initiate a new message
+// without needing a conversation_id.
+func SendMessageViaContactMethod(config *Config, contactMethodID, text string) (*Message, error) {
+	payload := SendMessageViaContactMethodRequest{
+		ContactMethodID: contactMethodID,
+		Text:            text,
+		MessageType:     "text",
+	}
+
+	return sendMessagePayload(config, payload)
+}
+
+// sendMessagePayload is a helper that sends any payload to the messages endpoint
+func sendMessagePayload(config *Config, payload interface{}) (*Message, error) {
 	jsonPayload, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal payload: %w", err)
